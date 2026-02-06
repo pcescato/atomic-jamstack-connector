@@ -84,7 +84,7 @@ class Columns {
 			'<span class="%s" title="%s">%s %s</span>',
 			esc_attr( $class ),
 			esc_attr( $label ),
-			$icon, // Already escaped in get_status_icon
+			wp_kses_post( $icon ), // Escape HTML output
 			esc_html( $label )
 		);
 

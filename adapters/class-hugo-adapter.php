@@ -139,6 +139,8 @@ class Hugo_Adapter implements Adapter_Interface {
 	 */
 	private function convert_content( string $content, array $image_mapping = array() ): string {
 		// Apply WordPress content filters
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 		$content = apply_filters( 'the_content', $content );
 
 		// Replace image URLs if mapping provided

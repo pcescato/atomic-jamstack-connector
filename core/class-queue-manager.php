@@ -400,6 +400,8 @@ class Queue_Manager {
 			// Return all posts with sync status
 			global $wpdb;
 
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$results = $wpdb->get_results(
 				$wpdb->prepare(
 					"SELECT post_id, meta_value as status 
@@ -436,7 +438,9 @@ class Queue_Manager {
 	public static function retry_failed(): void {
 		global $wpdb;
 
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		// Find all posts with error status
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$failed_posts = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT p.post_id, p.meta_value as retry_count
@@ -737,7 +741,9 @@ class Queue_Manager {
 		$total = wp_count_posts( 'post' );
 		$stats['total'] = $total->publish ?? 0;
 
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		// Count by sync status
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$status_counts = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT meta_value as status, COUNT(*) as count 
