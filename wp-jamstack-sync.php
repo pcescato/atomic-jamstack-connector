@@ -22,6 +22,11 @@ define( 'WPJAMSTACK_VERSION', '1.0.0' );
 define( 'WPJAMSTACK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPJAMSTACK_URL', plugin_dir_url( __FILE__ ) );
 
+// Load Composer autoloader if available
+if ( file_exists( WPJAMSTACK_PATH . 'vendor/autoload.php' ) ) {
+	require_once WPJAMSTACK_PATH . 'vendor/autoload.php';
+}
+
 // Development .env loader (only in development environment)
 if ( function_exists( 'wp_get_environment_type' ) && 'development' === wp_get_environment_type() ) {
 	wpjamstack_load_env();

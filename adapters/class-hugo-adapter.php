@@ -104,10 +104,8 @@ class Hugo_Adapter implements Adapter_Interface {
 	/**
 	 * Convert WordPress content to Markdown
 	 *
-	 * Improved HTML to Markdown conversion with better handling
-	 * of common WordPress content patterns.
-	 *
-	 * TODO: Replace with league/html-to-markdown for production.
+	 * Uses League\HTMLToMarkdown for professional HTML to Markdown conversion.
+	 * Falls back to basic conversion if library not available.
 	 *
 	 * @param string $content WordPress post content (HTML).
 	 *
@@ -123,14 +121,34 @@ class Hugo_Adapter implements Adapter_Interface {
 		// Handle common WordPress blocks (Gutenberg)
 		$content = $this->convert_gutenberg_blocks( $content );
 
-		// Convert HTML to Markdown
-		$content = $this->html_to_markdown( $content );
+		// Use League\HTMLToMarkdown if available
+		if ( class_exists( '\League\HTMLToMarkdown\HtmlConverter' ) ) {
+			try {
+				$converter = new \League\HTMLToMarkdown\HtmlConverter( array(
+					'strip_tags'         => false,
+					'remove_nodes'       => 'script style',
+					'hard_break'         => true,
+					'header_style'       => 'atx',
+					'bold_style'         => '**',
+					'italic_style'       => '*',
+					'suppress_errors'    => true,
+				) );
+
+				$markdown = $converter->convert( $content );
+			} catch ( \Exception $e ) {
+				// Fall back to basic conversion on error
+				$markdown = $this->basic_html_to_markdown( $content );
+			}
+		} else {
+			// Fall back to basic conversion if library not available
+			$markdown = $this->basic_html_to_markdown( $content );
+		}
 
 		// Clean up extra whitespace
-		$content = preg_replace( '/\n{3,}/', "\n\n", $content );
-		$content = trim( $content );
+		$markdown = preg_replace( '/\n{3,}/', "\n\n", $markdown );
+		$markdown = trim( $markdown );
 
-		return $content;
+		return $markdown;
 	}
 
 	/**
@@ -149,13 +167,13 @@ class Hugo_Adapter implements Adapter_Interface {
 	}
 
 	/**
-	 * Convert HTML to Markdown
+	 * Basic HTML to Markdown conversion (fallback)
 	 *
 	 * @param string $html HTML content.
 	 *
 	 * @return string Markdown content.
 	 */
-	private function html_to_markdown( string $html ): string {
+	private function basic_html_to_markdown( string $html ): string {
 		// Convert headings
 		$html = preg_replace( '/<h1[^>]*>(.*?)<\/h1>/is', "\n\n# $1\n\n", $html );
 		$html = preg_replace( '/<h2[^>]*>(.*?)<\/h2>/is', "\n\n## $1\n\n", $html );
