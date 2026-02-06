@@ -110,6 +110,9 @@ class Sync_Runner {
 		// Update success meta
 		self::update_sync_meta( $post_id, 'success' );
 
+		// Cache file path for future deletions
+		update_post_meta( $post_id, '_jamstack_file_path', $file_path );
+
 		Logger::success( 'Sync completed', array( 'post_id' => $post_id ) );
 
 		return array(
@@ -210,12 +213,38 @@ class Sync_Runner {
 
 			$file_path = $cached_path;
 		} else {
-			// Post exists, generate file path normally
-			$adapter   = new \WPJamstack\Adapters\Hugo_Adapter();
-			$file_path = $adapter->get_file_path( $post );
+			// Post exists, try to use cached path first
+			$cached_path = get_post_meta( $post_id, '_jamstack_file_path', true );
 
-			// Cache the file path for future deletions
-			update_post_meta( $post_id, '_jamstack_file_path', $file_path );
+			if ( ! empty( $cached_path ) ) {
+				// Use cached path
+				$file_path = $cached_path;
+				Logger::info(
+					'Using cached file path',
+					array(
+						'post_id' => $post_id,
+						'path'    => $file_path,
+					)
+				);
+			} else {
+				// Generate file path using adapter
+				require_once WPJAMSTACK_PATH . 'adapters/interface-adapter.php';
+				require_once WPJAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
+
+				$adapter   = new \WPJamstack\Adapters\Hugo_Adapter();
+				$file_path = $adapter->get_file_path( $post );
+
+				// Cache the file path for future use
+				update_post_meta( $post_id, '_jamstack_file_path', $file_path );
+
+				Logger::info(
+					'Generated and cached file path',
+					array(
+						'post_id' => $post_id,
+						'path'    => $file_path,
+					)
+				);
+			}
 		}
 
 		$git_api = new Git_API();
