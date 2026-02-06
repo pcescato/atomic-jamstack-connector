@@ -87,6 +87,7 @@ class Plugin {
 		require_once WPJAMSTACK_PATH . 'core/class-queue-manager.php';
 		require_once WPJAMSTACK_PATH . 'core/class-sync-runner.php';
 		require_once WPJAMSTACK_PATH . 'core/class-git-api.php';
+		require_once WPJAMSTACK_PATH . 'core/class-media-processor.php';
 	}
 
 	/**

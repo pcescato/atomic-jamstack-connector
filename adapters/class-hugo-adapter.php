@@ -24,13 +24,14 @@ class Hugo_Adapter implements Adapter_Interface {
 	/**
 	 * Convert WordPress post to Hugo Markdown format
 	 *
-	 * @param \WP_Post $post WordPress post object.
+	 * @param \WP_Post $post          WordPress post object.
+	 * @param array    $image_mapping Optional. Array mapping original URLs to new paths.
 	 *
 	 * @return string Complete Markdown content with YAML front matter.
 	 */
-	public function convert( \WP_Post $post ): string {
+	public function convert( \WP_Post $post, array $image_mapping = array() ): string {
 		$front_matter = $this->get_front_matter( $post );
-		$content      = $this->convert_content( $post->post_content );
+		$content      = $this->convert_content( $post->post_content, $image_mapping );
 
 		// Build YAML front matter
 		$yaml = "---\n";
@@ -107,13 +108,19 @@ class Hugo_Adapter implements Adapter_Interface {
 	 * Uses League\HTMLToMarkdown for professional HTML to Markdown conversion.
 	 * Falls back to basic conversion if library not available.
 	 *
-	 * @param string $content WordPress post content (HTML).
+	 * @param string $content       WordPress post content (HTML).
+	 * @param array  $image_mapping Optional. Array mapping original URLs to new paths.
 	 *
 	 * @return string Markdown content.
 	 */
-	private function convert_content( string $content ): string {
+	private function convert_content( string $content, array $image_mapping = array() ): string {
 		// Apply WordPress content filters
 		$content = apply_filters( 'the_content', $content );
+
+		// Replace image URLs if mapping provided
+		if ( ! empty( $image_mapping ) ) {
+			$content = $this->replace_image_urls( $content, $image_mapping );
+		}
 
 		// Convert WordPress shortcodes to readable text
 		$content = strip_shortcodes( $content );
@@ -149,6 +156,46 @@ class Hugo_Adapter implements Adapter_Interface {
 		$markdown = trim( $markdown );
 
 		return $markdown;
+	}
+
+	/**
+	 * Replace image URLs in content with relative paths
+	 *
+	 * @param string $content       HTML content.
+	 * @param array  $image_mapping Array mapping original URLs to new paths.
+	 *
+	 * @return string Content with replaced URLs.
+	 */
+	private function replace_image_urls( string $content, array $image_mapping ): string {
+		foreach ( $image_mapping as $original_url => $new_path ) {
+			// Replace in img src attributes
+			$content = str_replace(
+				'src="' . $original_url . '"',
+				'src="' . $new_path . '"',
+				$content
+			);
+			$content = str_replace(
+				"src='" . $original_url . "'",
+				"src='" . $new_path . "'",
+				$content
+			);
+
+			// Replace in markdown-style image links
+			$content = str_replace(
+				'](' . $original_url . ')',
+				'](' . $new_path . ')',
+				$content
+			);
+
+			// Replace srcset attributes (for responsive images)
+			$content = preg_replace(
+				'/' . preg_quote( $original_url, '/' ) . '\s+\d+w/',
+				$new_path . ' $1w',
+				$content
+			);
+		}
+
+		return $content;
 	}
 
 	/**
