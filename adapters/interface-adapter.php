@@ -2,12 +2,12 @@
 /**
  * Adapter Interface
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Adapters;
+namespace AtomicJamstack\Adapters;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );

@@ -2,12 +2,12 @@
 /**
  * Media Processor Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Core;
+namespace AtomicJamstack\Core;
 
 use Intervention\Image\ImageManager;
 
@@ -49,7 +49,7 @@ class Media_Processor {
 	 */
 	public function __construct() {
 		$this->git_api = new Git_API();
-		$this->temp_dir = sys_get_temp_dir() . '/wpjamstack-images';
+		$this->temp_dir = sys_get_temp_dir() . '/atomic-jamstack-images';
 
 		// Initialize Intervention Image with optimal driver
 		if ( class_exists( 'Intervention\Image\ImageManager' ) ) {
@@ -750,7 +750,7 @@ class Media_Processor {
 			wp_mkdir_p( $post_temp_dir );
 		}
 
-		$filename = basename( parse_url( $url, PHP_URL_PATH ) );
+		$filename = basename( wp_parse_url( $url, PHP_URL_PATH ) );
 		$filepath = $post_temp_dir . '/' . $filename;
 
 		// Download using wp_remote_get
@@ -1140,12 +1140,17 @@ class Media_Processor {
 		$files = glob( $post_temp_dir . '/*' );
 		foreach ( $files as $file ) {
 			if ( is_file( $file ) ) {
-				unlink( $file );
+				wp_delete_file( $file );
 			}
 		}
 
-		// Remove directory
-		rmdir( $post_temp_dir );
+		// Remove directory using WP_Filesystem
+		global $wp_filesystem;
+		if ( empty( $wp_filesystem ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+		$wp_filesystem->rmdir( $post_temp_dir );
 
 		Logger::info(
 			'Cleaned up temporary files',

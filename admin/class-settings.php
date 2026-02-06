@@ -2,15 +2,15 @@
 /**
  * Settings Page Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Admin;
+namespace AtomicJamstack\Admin;
 
-use WPJamstack\Core\Git_API;
-use WPJamstack\Core\Logger;
+use AtomicJamstack\Core\Git_API;
+use AtomicJamstack\Core\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -26,12 +26,12 @@ class Settings {
 	/**
 	 * Option name for settings
 	 */
-	public const OPTION_NAME = 'wpjamstack_settings';
+	public const OPTION_NAME = 'atomic_jamstack_settings';
 
 	/**
 	 * Settings page slug
 	 */
-	public const PAGE_SLUG = 'wpjamstack-settings';
+	public const PAGE_SLUG = 'atomic-jamstack-settings';
 
 	/**
 	 * Initialize settings
@@ -40,10 +40,10 @@ class Settings {
 	 */
 	public static function init(): void {
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
-		add_action( 'wp_ajax_wpjamstack_test_connection', array( __CLASS__, 'ajax_test_connection' ) );
-		add_action( 'wp_ajax_wpjamstack_bulk_sync', array( __CLASS__, 'ajax_bulk_sync' ) );
-		add_action( 'wp_ajax_wpjamstack_get_stats', array( __CLASS__, 'ajax_get_stats' ) );
-		add_action( 'wp_ajax_wpjamstack_sync_single', array( __CLASS__, 'ajax_sync_single' ) );
+		add_action( 'wp_ajax_atomic_jamstack_test_connection', array( __CLASS__, 'ajax_test_connection' ) );
+		add_action( 'wp_ajax_atomic_jamstack_bulk_sync', array( __CLASS__, 'ajax_bulk_sync' ) );
+		add_action( 'wp_ajax_atomic_jamstack_get_stats', array( __CLASS__, 'ajax_get_stats' ) );
+		add_action( 'wp_ajax_atomic_jamstack_sync_single', array( __CLASS__, 'ajax_sync_single' ) );
 	}
 
 	/**
@@ -63,66 +63,66 @@ class Settings {
 
 		// GitHub Settings Section
 		add_settings_section(
-			'wpjamstack_github_section',
-			__( 'GitHub Configuration', 'wp-jamstack-sync' ),
+			'atomic_jamstack_github_section',
+			__( 'GitHub Configuration', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_github_section' ),
 			self::PAGE_SLUG
 		);
 
 		add_settings_field(
 			'github_repo',
-			__( 'Repository', 'wp-jamstack-sync' ),
+			__( 'Repository', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_repo_field' ),
 			self::PAGE_SLUG,
-			'wpjamstack_github_section'
+			'atomic_jamstack_github_section'
 		);
 
 		add_settings_field(
 			'github_branch',
-			__( 'Branch', 'wp-jamstack-sync' ),
+			__( 'Branch', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_branch_field' ),
 			self::PAGE_SLUG,
-			'wpjamstack_github_section'
+			'atomic_jamstack_github_section'
 		);
 
 		add_settings_field(
 			'github_token',
-			__( 'Personal Access Token', 'wp-jamstack-sync' ),
+			__( 'Personal Access Token', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_token_field' ),
 			self::PAGE_SLUG,
-			'wpjamstack_github_section'
+			'atomic_jamstack_github_section'
 		);
 
 		// Debug Settings Section
 		add_settings_section(
-			'wpjamstack_debug_section',
-			__( 'Debug Settings', 'wp-jamstack-sync' ),
+			'atomic_jamstack_debug_section',
+			__( 'Debug Settings', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_debug_section' ),
 			self::PAGE_SLUG
 		);
 
 		add_settings_field(
 			'debug_mode',
-			__( 'Enable Debug Logging', 'wp-jamstack-sync' ),
+			__( 'Enable Debug Logging', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_debug_field' ),
 			self::PAGE_SLUG,
-			'wpjamstack_debug_section'
+			'atomic_jamstack_debug_section'
 		);
 
 		// Post Types Section
 		add_settings_section(
-			'wpjamstack_posttypes_section',
-			__( 'Content Types', 'wp-jamstack-sync' ),
+			'atomic_jamstack_posttypes_section',
+			__( 'Content Types', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_posttypes_section' ),
 			self::PAGE_SLUG
 		);
 
 		add_settings_field(
 			'enabled_post_types',
-			__( 'Synchronize', 'wp-jamstack-sync' ),
+			__( 'Synchronize', 'atomic-jamstack-connector' ),
 			array( __CLASS__, 'render_posttypes_field' ),
 			self::PAGE_SLUG,
-			'wpjamstack_posttypes_section'
+			'atomic_jamstack_posttypes_section'
 		);
 	}
 
@@ -145,7 +145,7 @@ class Settings {
 				add_settings_error(
 					self::OPTION_NAME,
 					'invalid_repo',
-					__( 'Repository must be in format: owner/repo', 'wp-jamstack-sync' ),
+					__( 'Repository must be in format: owner/repo', 'atomic-jamstack-connector' ),
 					'error'
 				);
 			}
@@ -226,7 +226,7 @@ class Settings {
 	 */
 	public static function render_github_section(): void {
 		echo '<p>';
-		esc_html_e( 'Configure your GitHub repository connection. You will need a Personal Access Token with repository write permissions.', 'wp-jamstack-sync' );
+		esc_html_e( 'Configure your GitHub repository connection. You will need a Personal Access Token with repository write permissions.', 'atomic-jamstack-connector' );
 		echo '</p>';
 	}
 
@@ -248,7 +248,7 @@ class Settings {
 			required
 		/>
 		<p class="description">
-			<?php esc_html_e( 'Format: owner/repository (e.g., johndoe/my-hugo-site)', 'wp-jamstack-sync' ); ?>
+			<?php esc_html_e( 'Format: owner/repository (e.g., johndoe/my-hugo-site)', 'atomic-jamstack-connector' ); ?>
 		</p>
 		<?php
 	}
@@ -270,7 +270,7 @@ class Settings {
 			placeholder="main"
 		/>
 		<p class="description">
-			<?php esc_html_e( 'Target branch for commits (default: main)', 'wp-jamstack-sync' ); ?>
+			<?php esc_html_e( 'Target branch for commits (default: main)', 'atomic-jamstack-connector' ); ?>
 		</p>
 		<?php
 	}
@@ -296,16 +296,16 @@ class Settings {
 			<?php
 			printf(
 				/* translators: %s: GitHub tokens URL */
-				esc_html__( 'Create a token at %s with repo permissions.', 'wp-jamstack-sync' ),
+				esc_html__( 'Create a token at %s with repo permissions.', 'atomic-jamstack-connector' ),
 				'<a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com/settings/tokens</a>'
 			);
 			?>
 		</p>
 		<p>
-			<button type="button" id="wpjamstack-test-connection" class="button button-secondary">
-				<?php esc_html_e( 'Test Connection', 'wp-jamstack-sync' ); ?>
+			<button type="button" id="atomic-jamstack-test-connection" class="button button-secondary">
+				<?php esc_html_e( 'Test Connection', 'atomic-jamstack-connector' ); ?>
 			</button>
-			<span id="wpjamstack-test-result"></span>
+			<span id="atomic-jamstack-test-result"></span>
 		</p>
 		<?php
 	}
@@ -317,7 +317,7 @@ class Settings {
 	 */
 	public static function render_debug_section(): void {
 		echo '<p>';
-		esc_html_e( 'Enable debug logging to troubleshoot sync issues.', 'wp-jamstack-sync' );
+		esc_html_e( 'Enable debug logging to troubleshoot sync issues.', 'atomic-jamstack-connector' );
 		echo '</p>';
 	}
 
@@ -337,10 +337,10 @@ class Settings {
 				value="1"
 				<?php checked( $checked ); ?>
 			/>
-			<?php esc_html_e( 'Enable detailed logging for debugging', 'wp-jamstack-sync' ); ?>
+			<?php esc_html_e( 'Enable detailed logging for debugging', 'atomic-jamstack-connector' ); ?>
 		</label>
 		<p class="description">
-			<?php esc_html_e( 'Logs will be written to wp-content/uploads/wpjamstack-logs/', 'wp-jamstack-sync' ); ?>
+			<?php esc_html_e( 'Logs will be written to wp-content/uploads/atomic-jamstack-logs/', 'atomic-jamstack-connector' ); ?>
 		</p>
 		<?php
 	}
@@ -352,7 +352,7 @@ class Settings {
 	 */
 	public static function render_posttypes_section(): void {
 		echo '<p>';
-		esc_html_e( 'Choose which content types should be synchronized to your Hugo site.', 'wp-jamstack-sync' );
+		esc_html_e( 'Choose which content types should be synchronized to your Hugo site.', 'atomic-jamstack-connector' );
 		echo '</p>';
 	}
 
@@ -367,12 +367,12 @@ class Settings {
 
 		$post_types = array(
 			'post' => array(
-				'label' => __( 'Posts', 'wp-jamstack-sync' ),
-				'description' => __( 'Standard blog posts (synced to content/posts/)', 'wp-jamstack-sync' ),
+				'label' => __( 'Posts', 'atomic-jamstack-connector' ),
+				'description' => __( 'Standard blog posts (synced to content/posts/)', 'atomic-jamstack-connector' ),
 			),
 			'page' => array(
-				'label' => __( 'Pages', 'wp-jamstack-sync' ),
-				'description' => __( 'Static pages (synced to content/)', 'wp-jamstack-sync' ),
+				'label' => __( 'Pages', 'atomic-jamstack-connector' ),
+				'description' => __( 'Static pages (synced to content/)', 'atomic-jamstack-connector' ),
 			),
 		);
 
@@ -406,7 +406,7 @@ class Settings {
 		}
 
 		// Get active tab
-		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'settings';
+		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'settings'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -415,15 +415,15 @@ class Settings {
 			<h2 class="nav-tab-wrapper">
 				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings" 
 				   class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Settings', 'wp-jamstack-sync' ); ?>
+					<?php esc_html_e( 'Settings', 'atomic-jamstack-connector' ); ?>
 				</a>
 				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=bulk" 
 				   class="nav-tab <?php echo $active_tab === 'bulk' ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Bulk Operations', 'wp-jamstack-sync' ); ?>
+					<?php esc_html_e( 'Bulk Operations', 'atomic-jamstack-connector' ); ?>
 				</a>
 				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=monitor" 
 				   class="nav-tab <?php echo $active_tab === 'monitor' ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Sync History', 'wp-jamstack-sync' ); ?>
+					<?php esc_html_e( 'Sync History', 'atomic-jamstack-connector' ); ?>
 				</a>
 			</h2>
 
@@ -473,55 +473,55 @@ class Settings {
 	private static function render_bulk_tab(): void {
 		?>
 			
-			<div id="wpjamstack-bulk-sync-section">
-				<button type="button" id="wpjamstack-bulk-sync-button" class="button button-secondary">
+			<div id="atomic-jamstack-bulk-sync-section">
+				<button type="button" id="atomic-jamstack-bulk-sync-button" class="button button-secondary">
 					<span class="dashicons dashicons-update"></span>
-					<?php esc_html_e( 'Synchronize All Posts', 'wp-jamstack-sync' ); ?>
+					<?php esc_html_e( 'Synchronize All Posts', 'atomic-jamstack-connector' ); ?>
 				</button>
 				
-				<div id="wpjamstack-bulk-status" style="margin-top: 15px; display: none;">
+				<div id="atomic-jamstack-bulk-status" style="margin-top: 15px; display: none;">
 					<p>
-						<strong><?php esc_html_e( 'Bulk Sync Status:', 'wp-jamstack-sync' ); ?></strong>
-						<span id="wpjamstack-bulk-message"></span>
+						<strong><?php esc_html_e( 'Bulk Sync Status:', 'atomic-jamstack-connector' ); ?></strong>
+						<span id="atomic-jamstack-bulk-message"></span>
 					</p>
-					<div class="wpjamstack-progress-bar" style="background: #f0f0f1; height: 30px; border-radius: 3px; overflow: hidden; position: relative;">
-						<div id="wpjamstack-progress-fill" style="background: #2271b1; height: 100%; width: 0%; transition: width 0.3s;"></div>
-						<div id="wpjamstack-progress-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #2c3338; font-weight: 600;"></div>
+					<div class="atomic-jamstack-progress-bar" style="background: #f0f0f1; height: 30px; border-radius: 3px; overflow: hidden; position: relative;">
+						<div id="atomic-jamstack-progress-fill" style="background: #2271b1; height: 100%; width: 0%; transition: width 0.3s;"></div>
+						<div id="atomic-jamstack-progress-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #2c3338; font-weight: 600;"></div>
 					</div>
 				</div>
 
-				<div id="wpjamstack-queue-stats" style="margin-top: 20px;">
-					<h3><?php esc_html_e( 'Queue Statistics', 'wp-jamstack-sync' ); ?></h3>
+				<div id="atomic-jamstack-queue-stats" style="margin-top: 20px;">
+					<h3><?php esc_html_e( 'Queue Statistics', 'atomic-jamstack-connector' ); ?></h3>
 					<table class="widefat" style="max-width: 600px;">
 						<tbody>
 							<tr>
-								<td><?php esc_html_e( 'Total Posts:', 'wp-jamstack-sync' ); ?></td>
+								<td><?php esc_html_e( 'Total Posts:', 'atomic-jamstack-connector' ); ?></td>
 								<td><strong id="stat-total">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Successfully Synced:', 'wp-jamstack-sync' ); ?></td>
+								<td><?php esc_html_e( 'Successfully Synced:', 'atomic-jamstack-connector' ); ?></td>
 								<td><strong id="stat-success" style="color: #46b450;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Pending:', 'wp-jamstack-sync' ); ?></td>
+								<td><?php esc_html_e( 'Pending:', 'atomic-jamstack-connector' ); ?></td>
 								<td><strong id="stat-pending" style="color: #f0ad4e;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Processing:', 'wp-jamstack-sync' ); ?></td>
+								<td><?php esc_html_e( 'Processing:', 'atomic-jamstack-connector' ); ?></td>
 								<td><strong id="stat-processing" style="color: #0073aa;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Errors:', 'wp-jamstack-sync' ); ?></td>
+								<td><?php esc_html_e( 'Errors:', 'atomic-jamstack-connector' ); ?></td>
 								<td><strong id="stat-error" style="color: #dc3232;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Not Synced:', 'wp-jamstack-sync' ); ?></td>
+								<td><?php esc_html_e( 'Not Synced:', 'atomic-jamstack-connector' ); ?></td>
 								<td><strong id="stat-not-synced">-</strong></td>
 							</tr>
 						</tbody>
 					</table>
-					<button type="button" id="wpjamstack-refresh-stats" class="button button-small" style="margin-top: 10px;">
-						<?php esc_html_e( 'Refresh Stats', 'wp-jamstack-sync' ); ?>
+					<button type="button" id="atomic-jamstack-refresh-stats" class="button button-small" style="margin-top: 10px;">
+						<?php esc_html_e( 'Refresh Stats', 'atomic-jamstack-connector' ); ?>
 					</button>
 				</div>
 			</div>
@@ -532,47 +532,47 @@ class Settings {
 				loadStats();
 
 				// Bulk sync button
-				$('#wpjamstack-bulk-sync-button').on('click', function() {
-					if (!confirm('<?php echo esc_js( __( 'Are you sure you want to synchronize all published posts? This may take several minutes.', 'wp-jamstack-sync' ) ); ?>')) {
+				$('#atomic-jamstack-bulk-sync-button').on('click', function() {
+					if (!confirm('<?php echo esc_js( __( 'Are you sure you want to synchronize all published posts? This may take several minutes.', 'atomic-jamstack-connector' ) ); ?>')) {
 						return;
 					}
 
 					var $button = $(this);
-					var $status = $('#wpjamstack-bulk-status');
-					var $message = $('#wpjamstack-bulk-message');
+					var $status = $('#atomic-jamstack-bulk-status');
+					var $message = $('#atomic-jamstack-bulk-message');
 
-					$button.prop('disabled', true).html('<span class="dashicons dashicons-update spin"></span> <?php esc_html_e( 'Starting...', 'wp-jamstack-sync' ); ?>');
+					$button.prop('disabled', true).html('<span class="dashicons dashicons-update spin"></span> <?php esc_html_e( 'Starting...', 'atomic-jamstack-connector' ); ?>');
 					$status.show();
 
 					$.ajax({
 						url: ajaxurl,
 						type: 'POST',
 						data: {
-							action: 'wpjamstack_bulk_sync',
-							nonce: '<?php echo esc_js( wp_create_nonce( 'wpjamstack-bulk-sync' ) ); ?>'
+							action: 'atomic_jamstack_bulk_sync',
+							nonce: '<?php echo esc_js( wp_create_nonce( 'atomic-jamstack-bulk-sync' ) ); ?>'
 						},
 						success: function(response) {
 							if (response.success) {
 								$message.html('✓ ' + response.data.message);
-								$('#wpjamstack-progress-text').text(response.data.enqueued + ' / ' + response.data.total + ' posts enqueued');
-								$('#wpjamstack-progress-fill').css('width', '100%');
+								$('#atomic-jamstack-progress-text').text(response.data.enqueued + ' / ' + response.data.total + ' posts enqueued');
+								$('#atomic-jamstack-progress-fill').css('width', '100%');
 								
 								// Start polling
 								startPolling();
 							} else {
 								$message.html('✗ ' + response.data.message);
 							}
-							$button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Synchronize All Posts', 'wp-jamstack-sync' ); ?>');
+							$button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Synchronize All Posts', 'atomic-jamstack-connector' ); ?>');
 						},
 						error: function() {
-							$message.html('✗ <?php echo esc_js( __( 'Request failed', 'wp-jamstack-sync' ) ); ?>');
-							$button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Synchronize All Posts', 'wp-jamstack-sync' ); ?>');
+							$message.html('✗ <?php echo esc_js( __( 'Request failed', 'atomic-jamstack-connector' ) ); ?>');
+							$button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Synchronize All Posts', 'atomic-jamstack-connector' ); ?>');
 						}
 					});
 				});
 
 				// Refresh stats button
-				$('#wpjamstack-refresh-stats').on('click', loadStats);
+				$('#atomic-jamstack-refresh-stats').on('click', loadStats);
 
 				// Load stats function
 				function loadStats() {
@@ -580,8 +580,8 @@ class Settings {
 						url: ajaxurl,
 						type: 'POST',
 						data: {
-							action: 'wpjamstack_get_stats',
-							nonce: '<?php echo esc_js( wp_create_nonce( 'wpjamstack-get-stats' ) ); ?>'
+							action: 'atomic_jamstack_get_stats',
+							nonce: '<?php echo esc_js( wp_create_nonce( 'atomic-jamstack-get-stats' ) ); ?>'
 						},
 						success: function(response) {
 							if (response.success) {
@@ -609,7 +609,7 @@ class Settings {
 						
 						if (pending === 0 && processing === 0) {
 							clearInterval(pollInterval);
-							$('#wpjamstack-bulk-message').html('✓ <?php echo esc_js( __( 'Bulk sync completed!', 'wp-jamstack-sync' ) ); ?>');
+							$('#atomic-jamstack-bulk-message').html('✓ <?php echo esc_js( __( 'Bulk sync completed!', 'atomic-jamstack-connector' ) ); ?>');
 						}
 					}, 3000); // Poll every 3 seconds
 				}
@@ -635,8 +635,8 @@ class Settings {
 	 */
 	private static function render_monitor_tab(): void {
 		?>
-		<h2><?php esc_html_e( 'Sync History', 'wp-jamstack-sync' ); ?></h2>
-		<p><?php esc_html_e( 'View the most recent sync operations and their status.', 'wp-jamstack-sync' ); ?></p>
+		<h2><?php esc_html_e( 'Sync History', 'atomic-jamstack-connector' ); ?></h2>
+		<p><?php esc_html_e( 'View the most recent sync operations and their status.', 'atomic-jamstack-connector' ); ?></p>
 
 		<?php
 		// Query posts with sync meta
@@ -658,7 +658,7 @@ class Settings {
 		if ( ! $query->have_posts() ) {
 			?>
 			<div class="notice notice-info">
-				<p><?php esc_html_e( 'No sync history found. Sync a post to see it appear here.', 'wp-jamstack-sync' ); ?></p>
+				<p><?php esc_html_e( 'No sync history found. Sync a post to see it appear here.', 'atomic-jamstack-connector' ); ?></p>
 			</div>
 			<?php
 			return;
@@ -669,25 +669,25 @@ class Settings {
 			<thead>
 				<tr>
 					<th scope="col" class="manage-column column-primary" style="width: 40%;">
-						<?php esc_html_e( 'Post Title', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'Post Title', 'atomic-jamstack-connector' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 80px;">
-						<?php esc_html_e( 'ID', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'ID', 'atomic-jamstack-connector' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 100px;">
-						<?php esc_html_e( 'Type', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'Type', 'atomic-jamstack-connector' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 120px;">
-						<?php esc_html_e( 'Status', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'Status', 'atomic-jamstack-connector' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 180px;">
-						<?php esc_html_e( 'Last Sync', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'Last Sync', 'atomic-jamstack-connector' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 120px;">
-						<?php esc_html_e( 'Commit', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'Commit', 'atomic-jamstack-connector' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 120px;">
-						<?php esc_html_e( 'Actions', 'wp-jamstack-sync' ); ?>
+						<?php esc_html_e( 'Actions', 'atomic-jamstack-connector' ); ?>
 					</th>
 				</tr>
 			</thead>
@@ -710,22 +710,22 @@ class Settings {
 						case 'success':
 							$status_icon = '●';
 							$status_color = '#46b450';
-							$status_label = __( 'Success', 'wp-jamstack-sync' );
+							$status_label = __( 'Success', 'atomic-jamstack-connector' );
 							break;
 						case 'error':
 							$status_icon = '●';
 							$status_color = '#dc3232';
-							$status_label = __( 'Error', 'wp-jamstack-sync' );
+							$status_label = __( 'Error', 'atomic-jamstack-connector' );
 							break;
 						case 'processing':
 							$status_icon = '◐';
 							$status_color = '#0073aa';
-							$status_label = __( 'Processing', 'wp-jamstack-sync' );
+							$status_label = __( 'Processing', 'atomic-jamstack-connector' );
 							break;
 						case 'pending':
 							$status_icon = '○';
 							$status_color = '#f0ad4e';
-							$status_label = __( 'Pending', 'wp-jamstack-sync' );
+							$status_label = __( 'Pending', 'atomic-jamstack-connector' );
 							break;
 						default:
 							$status_icon = '○';
@@ -735,7 +735,7 @@ class Settings {
 					}
 
 					// Format last sync time
-					$time_ago = $last_sync ? human_time_diff( strtotime( $last_sync ), current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'wp-jamstack-sync' ) : __( 'Never', 'wp-jamstack-sync' );
+					$time_ago = $last_sync ? human_time_diff( strtotime( $last_sync ), current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'atomic-jamstack-connector' ) : __( 'Never', 'atomic-jamstack-connector' );
 					?>
 					<tr>
 						<td class="column-primary">
@@ -758,7 +758,7 @@ class Settings {
 							<?php if ( $commit_url ) : ?>
 								<a href="<?php echo esc_url( $commit_url ); ?>" target="_blank" class="button button-small">
 									<span class="dashicons dashicons-external" style="font-size: 13px; width: 13px; height: 13px;"></span>
-									<?php esc_html_e( 'View Commit', 'wp-jamstack-sync' ); ?>
+									<?php esc_html_e( 'View Commit', 'atomic-jamstack-connector' ); ?>
 								</a>
 							<?php else : ?>
 								<span style="color: #999;">—</span>
@@ -766,11 +766,11 @@ class Settings {
 						</td>
 						<td>
 							<button type="button" 
-									class="button button-small wpjamstack-sync-now" 
+									class="button button-small atomic-jamstack-sync-now" 
 									data-post-id="<?php echo esc_attr( $post_id ); ?>"
 									<?php echo $status === 'processing' ? 'disabled' : ''; ?>>
 								<span class="dashicons dashicons-update" style="font-size: 13px; width: 13px; height: 13px;"></span>
-								<?php esc_html_e( 'Sync Now', 'wp-jamstack-sync' ); ?>
+								<?php esc_html_e( 'Sync Now', 'atomic-jamstack-connector' ); ?>
 							</button>
 						</td>
 					</tr>
@@ -782,23 +782,23 @@ class Settings {
 
 		<script>
 		jQuery(document).ready(function($) {
-			$('.wpjamstack-sync-now').on('click', function() {
+			$('.atomic-jamstack-sync-now').on('click', function() {
 				var $button = $(this);
 				var postId = $button.data('post-id');
 				
-				$button.prop('disabled', true).html('<span class="dashicons dashicons-update dashicons-spin"></span> <?php esc_html_e( 'Syncing...', 'wp-jamstack-sync' ); ?>');
+				$button.prop('disabled', true).html('<span class="dashicons dashicons-update dashicons-spin"></span> <?php esc_html_e( 'Syncing...', 'atomic-jamstack-connector' ); ?>');
 				
 				$.ajax({
 					url: ajaxurl,
 					type: 'POST',
 					data: {
-						action: 'wpjamstack_sync_single',
-						nonce: '<?php echo esc_js( wp_create_nonce( 'wpjamstack-sync-single' ) ); ?>',
+						action: 'atomic_jamstack_sync_single',
+						nonce: '<?php echo esc_js( wp_create_nonce( 'atomic-jamstack-sync-single' ) ); ?>',
 						post_id: postId
 					},
 					success: function(response) {
 						if (response.success) {
-							$button.html('<span class="dashicons dashicons-yes" style="color: #46b450;"></span> <?php esc_html_e( 'Synced!', 'wp-jamstack-sync' ); ?>');
+							$button.html('<span class="dashicons dashicons-yes" style="color: #46b450;"></span> <?php esc_html_e( 'Synced!', 'atomic-jamstack-connector' ); ?>');
 							// Reload page after 2 seconds
 							setTimeout(function() {
 								location.reload();
@@ -807,15 +807,15 @@ class Settings {
 							$button.html('<span class="dashicons dashicons-no" style="color: #dc3232;"></span> ' + response.data.message);
 							$button.prop('disabled', false);
 							setTimeout(function() {
-								$button.html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Sync Now', 'wp-jamstack-sync' ); ?>');
+								$button.html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Sync Now', 'atomic-jamstack-connector' ); ?>');
 							}, 3000);
 						}
 					},
 					error: function() {
-						$button.html('<span class="dashicons dashicons-no"></span> <?php esc_html_e( 'Error', 'wp-jamstack-sync' ); ?>');
+						$button.html('<span class="dashicons dashicons-no"></span> <?php esc_html_e( 'Error', 'atomic-jamstack-connector' ); ?>');
 						$button.prop('disabled', false);
 						setTimeout(function() {
-							$button.html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Sync Now', 'wp-jamstack-sync' ); ?>');
+							$button.html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Sync Now', 'atomic-jamstack-connector' ); ?>');
 						}, 3000);
 					}
 				});
@@ -825,9 +825,9 @@ class Settings {
 
 		<style>
 		.dashicons-spin {
-			animation: wpjamstack-spin 1s linear infinite;
+			animation: atomic-jamstack-spin 1s linear infinite;
 		}
-		@keyframes wpjamstack-spin {
+		@keyframes atomic-jamstack-spin {
 			0% { transform: rotate(0deg); }
 			100% { transform: rotate(360deg); }
 		}
@@ -841,19 +841,19 @@ class Settings {
 	 * @return void
 	 */
 	public static function ajax_bulk_sync(): void {
-		check_ajax_referer( 'wpjamstack-bulk-sync', 'nonce' );
+		check_ajax_referer( 'atomic-jamstack-bulk-sync', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'wp-jamstack-sync' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
 		}
 
-		$result = \WPJamstack\Core\Queue_Manager::bulk_enqueue();
+		$result = \AtomicJamstack\Core\Queue_Manager::bulk_enqueue();
 
 		wp_send_json_success(
 			array(
 				'message'  => sprintf(
 					/* translators: 1: Number of posts enqueued, 2: Total posts, 3: Number skipped */
-					__( '%1$d of %2$d posts enqueued for sync (%3$d already in queue).', 'wp-jamstack-sync' ),
+					__( '%1$d of %2$d posts enqueued for sync (%3$d already in queue).', 'atomic-jamstack-connector' ),
 					$result['enqueued'],
 					$result['total'],
 					$result['skipped']
@@ -871,13 +871,13 @@ class Settings {
 	 * @return void
 	 */
 	public static function ajax_get_stats(): void {
-		check_ajax_referer( 'wpjamstack-get-stats', 'nonce' );
+		check_ajax_referer( 'atomic-jamstack-get-stats', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'wp-jamstack-sync' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
 		}
 
-		$stats = \WPJamstack\Core\Queue_Manager::get_queue_stats();
+		$stats = \AtomicJamstack\Core\Queue_Manager::get_queue_stats();
 
 		wp_send_json_success( $stats );
 	}
@@ -888,10 +888,10 @@ class Settings {
 	 * @return void
 	 */
 	public static function ajax_test_connection(): void {
-		check_ajax_referer( 'wpjamstack-test-connection', 'nonce' );
+		check_ajax_referer( 'atomic-jamstack-test-connection', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'wp-jamstack-sync' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
 		}
 
 		$git_api = new Git_API();
@@ -903,7 +903,7 @@ class Settings {
 		}
 
 		Logger::success( 'Connection test successful' );
-		wp_send_json_success( array( 'message' => __( 'Connection successful!', 'wp-jamstack-sync' ) ) );
+		wp_send_json_success( array( 'message' => __( 'Connection successful!', 'atomic-jamstack-connector' ) ) );
 	}
 
 	/**
@@ -912,24 +912,24 @@ class Settings {
 	 * @return void
 	 */
 	public static function ajax_sync_single(): void {
-		check_ajax_referer( 'wpjamstack-sync-single', 'nonce' );
+		check_ajax_referer( 'atomic-jamstack-sync-single', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'wp-jamstack-sync' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
 		}
 
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 
 		if ( ! $post_id ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid post ID', 'wp-jamstack-sync' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid post ID', 'atomic-jamstack-connector' ) ) );
 		}
 
 		// Enqueue the post for sync
-		require_once WPJAMSTACK_PATH . 'core/class-queue-manager.php';
-		\WPJamstack\Core\Queue_Manager::enqueue( $post_id, 5 ); // High priority
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-queue-manager.php';
+		\AtomicJamstack\Core\Queue_Manager::enqueue( $post_id, 5 ); // High priority
 
 		wp_send_json_success( array(
-			'message' => __( 'Post enqueued for synchronization', 'wp-jamstack-sync' ),
+			'message' => __( 'Post enqueued for synchronization', 'atomic-jamstack-connector' ),
 			'post_id' => $post_id,
 		) );
 	}

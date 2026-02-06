@@ -2,12 +2,12 @@
 /**
  * Queue Manager Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Core;
+namespace AtomicJamstack\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -30,12 +30,12 @@ class Queue_Manager {
 	/**
 	 * Action hook for processing sync tasks
 	 */
-	public const SYNC_HOOK = 'wpjamstack_sync_post';
+	public const SYNC_HOOK = 'atomic_jamstack_sync_post';
 
 	/**
 	 * Action hook for processing deletion tasks
 	 */
-	public const DELETE_HOOK = 'wpjamstack_delete_post';
+	public const DELETE_HOOK = 'atomic_jamstack_delete_post';
 
 	/**
 	 * Post meta key for sync status
@@ -112,7 +112,7 @@ class Queue_Manager {
 					'post_id'           => $post_id,
 					'function_exists'   => function_exists( 'as_enqueue_async_action' ),
 					'class_exists'      => class_exists( 'ActionScheduler' ),
-					'vendor_path_check' => file_exists( WPJAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ),
+					'vendor_path_check' => file_exists( ATOMIC_JAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ),
 				)
 			);
 		}
@@ -310,7 +310,7 @@ class Queue_Manager {
 		Logger::info( 'Bulk sync initiated' );
 
 		// Get enabled post types from settings
-		$settings = get_option( 'wpjamstack_settings', array() );
+		$settings = get_option( 'atomic_jamstack_settings', array() );
 		$post_types = $settings['enabled_post_types'] ?? array( 'post' );
 
 		// Ensure it's an array

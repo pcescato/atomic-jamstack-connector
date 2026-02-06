@@ -2,12 +2,12 @@
 /**
  * Git API Client Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Core;
+namespace AtomicJamstack\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -60,7 +60,7 @@ class Git_API {
 	 * Decrypts GitHub token for use in API requests.
 	 */
 	public function __construct() {
-		$settings = get_option( 'wpjamstack_settings', array() );
+		$settings = get_option( 'atomic_jamstack_settings', array() );
 
 		// Decrypt token if present
 		if ( ! empty( $settings['github_token'] ) ) {
@@ -121,7 +121,7 @@ class Git_API {
 			'Authorization' => 'Bearer ' . $this->token,
 			'Accept'        => 'application/vnd.github+json',
 			'Content-Type'  => 'application/json',
-			'User-Agent'    => 'WP-Jamstack-Sync/' . WPJAMSTACK_VERSION,
+			'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 		);
 	}
 
@@ -141,7 +141,7 @@ class Git_API {
 			Logger::error( 'GitHub token not configured' );
 			return new \WP_Error(
 				'missing_token',
-				__( 'GitHub token is not configured. Please add your token in plugin settings.', 'wp-jamstack-sync' )
+				__( 'GitHub token is not configured. Please add your token in plugin settings.', 'atomic-jamstack-connector' )
 			);
 		}
 
@@ -149,7 +149,7 @@ class Git_API {
 			Logger::error( 'GitHub repository not configured' );
 			return new \WP_Error(
 				'missing_repo',
-				__( 'GitHub repository is not configured. Please add repository in format: owner/repo', 'wp-jamstack-sync' )
+				__( 'GitHub repository is not configured. Please add repository in format: owner/repo', 'atomic-jamstack-connector' )
 			);
 		}
 
@@ -161,7 +161,7 @@ class Git_API {
 			);
 			return new \WP_Error(
 				'invalid_repo_format',
-				__( 'Repository must be in format: owner/repo', 'wp-jamstack-sync' )
+				__( 'Repository must be in format: owner/repo', 'atomic-jamstack-connector' )
 			);
 		}
 
@@ -183,7 +183,7 @@ class Git_API {
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $this->token,
 					'Accept'        => 'application/vnd.github+json',
-					'User-Agent'    => 'WP-Jamstack-Sync/' . WPJAMSTACK_VERSION,
+					'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 				),
 				'timeout' => 15,
 			)
@@ -202,7 +202,7 @@ class Git_API {
 				'network_error',
 				sprintf(
 					/* translators: %s: Error message */
-					__( 'Failed to connect to GitHub: %s', 'wp-jamstack-sync' ),
+					__( 'Failed to connect to GitHub: %s', 'atomic-jamstack-connector' ),
 					$response->get_error_message()
 				)
 			);
@@ -245,7 +245,7 @@ class Git_API {
 					);
 					return new \WP_Error(
 						'no_push_permission',
-						__( 'GitHub token does not have push permission to this repository. Please check token permissions.', 'wp-jamstack-sync' )
+						__( 'GitHub token does not have push permission to this repository. Please check token permissions.', 'atomic-jamstack-connector' )
 					);
 				}
 
@@ -264,7 +264,7 @@ class Git_API {
 				);
 				return new \WP_Error(
 					'invalid_token',
-					__( 'GitHub token is invalid or expired. Please check your token.', 'wp-jamstack-sync' )
+					__( 'GitHub token is invalid or expired. Please check your token.', 'atomic-jamstack-connector' )
 				);
 
 			case 403:
@@ -287,7 +287,7 @@ class Git_API {
 						'rate_limit_exceeded',
 						sprintf(
 							/* translators: %s: Reset time */
-							__( 'GitHub API rate limit exceeded. Resets at: %s UTC', 'wp-jamstack-sync' ),
+							__( 'GitHub API rate limit exceeded. Resets at: %s UTC', 'atomic-jamstack-connector' ),
 							$reset_time
 						)
 					);
@@ -304,7 +304,7 @@ class Git_API {
 					'access_forbidden',
 					sprintf(
 						/* translators: %s: Error message */
-						__( 'Access forbidden: %s', 'wp-jamstack-sync' ),
+						__( 'Access forbidden: %s', 'atomic-jamstack-connector' ),
 						$error_message
 					)
 				);
@@ -322,7 +322,7 @@ class Git_API {
 					'repo_not_found',
 					sprintf(
 						/* translators: %s: Repository name */
-						__( 'Repository not found: %s. Please check the repository name and your access permissions.', 'wp-jamstack-sync' ),
+						__( 'Repository not found: %s. Please check the repository name and your access permissions.', 'atomic-jamstack-connector' ),
 						$this->repo
 					)
 				);
@@ -342,7 +342,7 @@ class Git_API {
 					'api_error',
 					sprintf(
 						/* translators: 1: HTTP status code, 2: Error message */
-						__( 'GitHub API error (HTTP %1$d): %2$s', 'wp-jamstack-sync' ),
+						__( 'GitHub API error (HTTP %1$d): %2$s', 'atomic-jamstack-connector' ),
 						$status_code,
 						$error_message
 					)
@@ -357,7 +357,7 @@ class Git_API {
 	 */
 	public function get_branch_sha(): string|\WP_Error {
 		if ( empty( $this->token ) || empty( $this->repo ) ) {
-			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'atomic-jamstack-connector' ) );
 		}
 
 		$url = sprintf( '%s/repos/%s/git/ref/heads/%s', $this->api_base, $this->repo, $this->branch );
@@ -368,7 +368,7 @@ class Git_API {
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $this->token,
 					'Accept'        => 'application/vnd.github+json',
-					'User-Agent'    => 'WP-Jamstack-Sync/' . WPJAMSTACK_VERSION,
+					'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 				),
 				'timeout' => 15,
 			)
@@ -388,7 +388,7 @@ class Git_API {
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
 
-		return $data['object']['sha'] ?? new \WP_Error( 'invalid_response', __( 'Invalid API response', 'wp-jamstack-sync' ) );
+		return $data['object']['sha'] ?? new \WP_Error( 'invalid_response', __( 'Invalid API response', 'atomic-jamstack-connector' ) );
 	}
 
 	/**
@@ -403,7 +403,7 @@ class Git_API {
 	 */
 	public function create_or_update_file( string $path, string $content, string $message, ?string $sha = null ): array|\WP_Error {
 		if ( empty( $this->token ) || empty( $this->repo ) ) {
-			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'atomic-jamstack-connector' ) );
 		}
 
 		$url = sprintf( '%s/repos/%s/contents/%s', $this->api_base, $this->repo, ltrim( $path, '/' ) );
@@ -426,7 +426,7 @@ class Git_API {
 					'Authorization' => 'Bearer ' . $this->token,
 					'Accept'        => 'application/vnd.github+json',
 					'Content-Type'  => 'application/json',
-					'User-Agent'    => 'WP-Jamstack-Sync/' . WPJAMSTACK_VERSION,
+					'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 				),
 				'body'    => wp_json_encode( $body ),
 				'timeout' => 30,
@@ -484,7 +484,7 @@ class Git_API {
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $this->token,
 					'Accept'        => 'application/vnd.github+json',
-					'User-Agent'    => 'WP-Jamstack-Sync/' . WPJAMSTACK_VERSION,
+					'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 				),
 				'timeout' => 15,
 			)
@@ -560,7 +560,7 @@ class Git_API {
 	 */
 	public function delete_file( string $path, string $message ): bool|\WP_Error {
 		if ( empty( $this->token ) || empty( $this->repo ) ) {
-			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'atomic-jamstack-connector' ) );
 		}
 
 		Logger::info(
@@ -591,7 +591,7 @@ class Git_API {
 		if ( empty( $file_data['sha'] ) ) {
 			return new \WP_Error(
 				'missing_sha',
-				__( 'Unable to retrieve file SHA for deletion', 'wp-jamstack-sync' )
+				__( 'Unable to retrieve file SHA for deletion', 'atomic-jamstack-connector' )
 			);
 		}
 
@@ -675,7 +675,7 @@ class Git_API {
 			'api_error',
 			sprintf(
 				/* translators: 1: HTTP status code, 2: Error message */
-				__( 'GitHub API error (HTTP %1$d): %2$s', 'wp-jamstack-sync' ),
+				__( 'GitHub API error (HTTP %1$d): %2$s', 'atomic-jamstack-connector' ),
 				$status_code,
 				$error_message
 			)
@@ -689,7 +689,7 @@ class Git_API {
 	 */
 	public function get_rate_limit(): array|\WP_Error {
 		if ( empty( $this->token ) ) {
-			return new \WP_Error( 'missing_token', __( 'GitHub token missing', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'missing_token', __( 'GitHub token missing', 'atomic-jamstack-connector' ) );
 		}
 
 		$url = $this->api_base . '/rate_limit';
@@ -700,7 +700,7 @@ class Git_API {
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $this->token,
 					'Accept'        => 'application/vnd.github+json',
-					'User-Agent'    => 'WP-Jamstack-Sync/' . WPJAMSTACK_VERSION,
+					'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 				),
 				'timeout' => 10,
 			)
@@ -712,7 +712,7 @@ class Git_API {
 
 		$status_code = wp_remote_retrieve_response_code( $response );
 		if ( 200 !== $status_code ) {
-			return new \WP_Error( 'api_error', __( 'Failed to get rate limit', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'api_error', __( 'Failed to get rate limit', 'atomic-jamstack-connector' ) );
 		}
 
 		$body = wp_remote_retrieve_body( $response );
@@ -731,7 +731,7 @@ class Git_API {
 	 */
 	public function list_directory( string $path ): array|\WP_Error {
 		if ( empty( $this->token ) || empty( $this->repo ) ) {
-			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'missing_config', __( 'GitHub configuration missing', 'atomic-jamstack-connector' ) );
 		}
 
 		$url = sprintf(
@@ -777,7 +777,7 @@ class Git_API {
 		if ( ! is_array( $data ) ) {
 			return new \WP_Error(
 				'invalid_response',
-				__( 'Expected directory listing, got single file', 'wp-jamstack-sync' )
+				__( 'Expected directory listing, got single file', 'atomic-jamstack-connector' )
 			);
 		}
 
@@ -799,7 +799,7 @@ class Git_API {
 		if ( empty( $files ) ) {
 			return new \WP_Error(
 				'empty_payload',
-				__( 'No files provided for atomic commit', 'wp-jamstack-sync' )
+				__( 'No files provided for atomic commit', 'atomic-jamstack-connector' )
 			);
 		}
 

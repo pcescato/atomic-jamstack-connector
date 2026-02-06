@@ -2,12 +2,12 @@
 /**
  * Logger Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Core;
+namespace AtomicJamstack\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -76,7 +76,7 @@ class Logger {
 	 * @return bool True if debug logging is enabled.
 	 */
 	private static function is_debug_enabled(): bool {
-		$settings = get_option( 'wpjamstack_settings', array() );
+		$settings = get_option( 'atomic_jamstack_settings', array() );
 		return ! empty( $settings['debug_mode'] );
 	}
 
@@ -89,7 +89,7 @@ class Logger {
 	 */
 	private static function write_to_file( string $log_entry ): void {
 		$upload_dir = wp_upload_dir();
-		$log_dir = $upload_dir['basedir'] . '/wpjamstack-logs';
+		$log_dir = $upload_dir['basedir'] . '/atomic-jamstack-logs';
 
 		// Create log directory if it doesn't exist
 		if ( ! file_exists( $log_dir ) ) {
@@ -103,7 +103,7 @@ class Logger {
 			}
 		}
 
-		$log_file = $log_dir . '/wpjamstack-' . gmdate( 'Y-m-d' ) . '.log';
+		$log_file = $log_dir . '/atomic-jamstack-' . gmdate( 'Y-m-d' ) . '.log';
 
 		// Append to log file
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
@@ -120,7 +120,7 @@ class Logger {
 	 * @return void
 	 */
 	private static function store_in_database( string $level, string $message, array $context ): void {
-		$logs = get_option( 'wpjamstack_logs', array() );
+		$logs = get_option( 'atomic_jamstack_logs', array() );
 
 		// Add new entry
 		$logs[] = array(
@@ -135,7 +135,7 @@ class Logger {
 			$logs = array_slice( $logs, -100 );
 		}
 
-		update_option( 'wpjamstack_logs', $logs, false );
+		update_option( 'atomic_jamstack_logs', $logs, false );
 	}
 
 	/**

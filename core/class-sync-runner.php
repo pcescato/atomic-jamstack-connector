@@ -2,12 +2,12 @@
 /**
  * Sync Runner Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Core;
+namespace AtomicJamstack\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -46,18 +46,18 @@ class Sync_Runner {
 		if ( ! $post ) {
 			Logger::error( 'Post not found', array( 'post_id' => $post_id ) );
 			self::update_sync_meta( $post_id, 'error' );
-			return new \WP_Error( 'post_not_found', __( 'Post not found', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'post_not_found', __( 'Post not found', 'atomic-jamstack-connector' ) );
 		}
 
 		// Only sync published posts
 		if ( 'publish' !== $post->post_status ) {
 			Logger::warning( 'Post not published, skipping sync', array( 'post_id' => $post_id, 'status' => $post->post_status ) );
 			self::update_sync_meta( $post_id, 'error' );
-			return new \WP_Error( 'post_not_published', __( 'Only published posts can be synced', 'wp-jamstack-sync' ) );
+			return new \WP_Error( 'post_not_published', __( 'Only published posts can be synced', 'atomic-jamstack-connector' ) );
 		}
 
 		// Initialize media processor
-		require_once WPJAMSTACK_PATH . 'core/class-media-processor.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-media-processor.php';
 		$media_processor = new Media_Processor();
 
 		// Collect featured image data
@@ -70,10 +70,10 @@ class Sync_Runner {
 		$image_mapping = $images_result['mappings'] ?? array();
 
 		// Load adapter
-		require_once WPJAMSTACK_PATH . 'adapters/interface-adapter.php';
-		require_once WPJAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'adapters/interface-adapter.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
 
-		$adapter = new \WPJamstack\Adapters\Hugo_Adapter();
+		$adapter = new \AtomicJamstack\Adapters\Hugo_Adapter();
 
 		// Convert to Markdown with image path replacements and featured image
 		try {
@@ -166,7 +166,7 @@ class Sync_Runner {
 
 		// Save commit URL for monitoring dashboard
 		if ( isset( $result['commit_sha'] ) ) {
-			$settings   = get_option( 'wpjamstack_settings', array() );
+			$settings   = get_option( 'atomic_jamstack_settings', array() );
 			$repo       = isset( $settings['github_repo'] ) ? $settings['github_repo'] : '';
 			if ( ! empty( $repo ) ) {
 				$commit_url = sprintf( 'https://github.com/%s/commit/%s', $repo, $result['commit_sha'] );
@@ -269,7 +269,7 @@ class Sync_Runner {
 				);
 				return new \WP_Error(
 					'post_not_found',
-					__( 'Post not found and no cached file path available', 'wp-jamstack-sync' )
+					__( 'Post not found and no cached file path available', 'atomic-jamstack-connector' )
 				);
 			}
 
@@ -290,10 +290,10 @@ class Sync_Runner {
 				);
 			} else {
 				// Generate file path using adapter
-				require_once WPJAMSTACK_PATH . 'adapters/interface-adapter.php';
-				require_once WPJAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
+				require_once ATOMIC_JAMSTACK_PATH . 'adapters/interface-adapter.php';
+				require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
 
-				$adapter   = new \WPJamstack\Adapters\Hugo_Adapter();
+				$adapter   = new \AtomicJamstack\Adapters\Hugo_Adapter();
 				$file_path = $adapter->get_file_path( $post );
 
 				// Cache the file path for future use

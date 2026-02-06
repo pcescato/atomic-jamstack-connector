@@ -2,12 +2,12 @@
 /**
  * Hugo Adapter Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Adapters;
+namespace AtomicJamstack\Adapters;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -374,7 +374,7 @@ class Hugo_Adapter implements Adapter_Interface {
 		$html = preg_replace( '/<p[^>]*>(.*?)<\/p>/is', "$1\n\n", $html );
 
 		// Remove remaining HTML tags
-		$html = strip_tags( $html );
+		$html = wp_strip_all_tags( $html );
 
 		// Decode HTML entities
 		$html = html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' );

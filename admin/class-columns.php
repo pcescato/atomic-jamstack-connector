@@ -2,14 +2,14 @@
 /**
  * Posts List Columns Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Admin;
+namespace AtomicJamstack\Admin;
 
-use WPJamstack\Core\Queue_Manager;
+use AtomicJamstack\Core\Queue_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -55,7 +55,7 @@ class Columns {
 		foreach ( $columns as $key => $value ) {
 			$new_columns[ $key ] = $value;
 			if ( 'title' === $key ) {
-				$new_columns['jamstack_sync'] = __( 'Jamstack Sync', 'wp-jamstack-sync' );
+				$new_columns['jamstack_sync'] = __( 'Jamstack Sync', 'atomic-jamstack-connector' );
 			}
 		}
 
@@ -94,8 +94,9 @@ class Columns {
 			$time_diff = human_time_diff( (int) $timestamp, current_time( 'timestamp' ) );
 			printf(
 				'<br><small class="jamstack-timestamp">%s %s</small>',
-				esc_html( $label === __( 'Success', 'wp-jamstack-sync' ) ? __( 'Synced', 'wp-jamstack-sync' ) : __( 'Updated', 'wp-jamstack-sync' ) ),
-				esc_html( sprintf( __( '%s ago', 'wp-jamstack-sync' ), $time_diff ) )
+				esc_html( $label === __( 'Success', 'atomic-jamstack-connector' ) ? __( 'Synced', 'atomic-jamstack-connector' ) : __( 'Updated', 'atomic-jamstack-connector' ) ),
+				/* translators: %s: human-readable time difference */
+				esc_html( sprintf( __( '%s ago', 'atomic-jamstack-connector' ), $time_diff ) )
 			);
 		}
 	}
@@ -132,15 +133,15 @@ class Columns {
 	 */
 	private static function get_status_label( string $status ): string {
 		$labels = array(
-			Queue_Manager::STATUS_PENDING    => __( 'Pending', 'wp-jamstack-sync' ),
-			Queue_Manager::STATUS_PROCESSING => __( 'Processing', 'wp-jamstack-sync' ),
-			Queue_Manager::STATUS_SUCCESS    => __( 'Success', 'wp-jamstack-sync' ),
-			Queue_Manager::STATUS_ERROR      => __( 'Error', 'wp-jamstack-sync' ),
-			Queue_Manager::STATUS_CANCELLED  => __( 'Cancelled', 'wp-jamstack-sync' ),
-			'deleting'                       => __( 'Deleting', 'wp-jamstack-sync' ),
-			'deleted'                        => __( 'Deleted', 'wp-jamstack-sync' ),
-			'delete_error'                   => __( 'Delete Error', 'wp-jamstack-sync' ),
-			'unknown'                        => __( 'Not Synced', 'wp-jamstack-sync' ),
+			Queue_Manager::STATUS_PENDING    => __( 'Pending', 'atomic-jamstack-connector' ),
+			Queue_Manager::STATUS_PROCESSING => __( 'Processing', 'atomic-jamstack-connector' ),
+			Queue_Manager::STATUS_SUCCESS    => __( 'Success', 'atomic-jamstack-connector' ),
+			Queue_Manager::STATUS_ERROR      => __( 'Error', 'atomic-jamstack-connector' ),
+			Queue_Manager::STATUS_CANCELLED  => __( 'Cancelled', 'atomic-jamstack-connector' ),
+			'deleting'                       => __( 'Deleting', 'atomic-jamstack-connector' ),
+			'deleted'                        => __( 'Deleted', 'atomic-jamstack-connector' ),
+			'delete_error'                   => __( 'Delete Error', 'atomic-jamstack-connector' ),
+			'unknown'                        => __( 'Not Synced', 'atomic-jamstack-connector' ),
 		);
 
 		return $labels[ $status ] ?? $labels['unknown'];
@@ -233,7 +234,7 @@ class Columns {
 			esc_attr( $post->ID ),
 			esc_attr( $nonce ),
 			esc_url( $url ),
-			esc_html__( 'Sync Now', 'wp-jamstack-sync' )
+			esc_html__( 'Sync Now', 'atomic-jamstack-connector' )
 		);
 
 		// Add inline script for AJAX handling (only once)
@@ -264,7 +265,7 @@ class Columns {
 				var ajaxUrl = $link.data('ajax-url');
 				
 				// Disable link and show loading
-				$link.css('opacity', '0.5').text('<?php echo esc_js( __( 'Syncing...', 'wp-jamstack-sync' ) ); ?>');
+				$link.css('opacity', '0.5').text('<?php echo esc_js( __( 'Syncing...', 'atomic-jamstack-connector' ) ); ?>');
 				
 				$.ajax({
 					url: ajaxUrl,
@@ -276,19 +277,19 @@ class Columns {
 					},
 					success: function(response) {
 						if (response.success) {
-							$link.text('<?php echo esc_js( __( 'Enqueued!', 'wp-jamstack-sync' ) ); ?>');
+							$link.text('<?php echo esc_js( __( 'Enqueued!', 'atomic-jamstack-connector' ) ); ?>');
 							// Reload page after 1 second to show updated status
 							setTimeout(function() {
 								location.reload();
 							}, 1000);
 						} else {
-							$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'wp-jamstack-sync' ) ); ?>');
-							alert(response.data || '<?php echo esc_js( __( 'Failed to sync', 'wp-jamstack-sync' ) ); ?>');
+							$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'atomic-jamstack-connector' ) ); ?>');
+							alert(response.data || '<?php echo esc_js( __( 'Failed to sync', 'atomic-jamstack-connector' ) ); ?>');
 						}
 					},
 					error: function() {
-						$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'wp-jamstack-sync' ) ); ?>');
-						alert('<?php echo esc_js( __( 'AJAX error', 'wp-jamstack-sync' ) ); ?>');
+						$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'atomic-jamstack-connector' ) ); ?>');
+						alert('<?php echo esc_js( __( 'AJAX error', 'atomic-jamstack-connector' ) ); ?>');
 					}
 				});
 			});
@@ -309,26 +310,26 @@ class Columns {
 		// Verify nonce
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'jamstack_sync_now_' . $post_id ) ) {
-			wp_send_json_error( __( 'Security check failed', 'wp-jamstack-sync' ) );
+			wp_send_json_error( __( 'Security check failed', 'atomic-jamstack-connector' ) );
 			return;
 		}
 
 		// Check user permissions
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( __( 'Insufficient permissions', 'wp-jamstack-sync' ) );
+			wp_send_json_error( __( 'Insufficient permissions', 'atomic-jamstack-connector' ) );
 			return;
 		}
 
 		// Verify post exists and is published
 		$post = get_post( $post_id );
 		if ( ! $post || 'publish' !== $post->post_status ) {
-			wp_send_json_error( __( 'Post not found or not published', 'wp-jamstack-sync' ) );
+			wp_send_json_error( __( 'Post not found or not published', 'atomic-jamstack-connector' ) );
 			return;
 		}
 
 		// Enqueue the post
 		Queue_Manager::enqueue( $post_id );
 
-		wp_send_json_success( __( 'Post enqueued for sync', 'wp-jamstack-sync' ) );
+		wp_send_json_success( __( 'Post enqueued for sync', 'atomic-jamstack-connector' ) );
 	}
 }

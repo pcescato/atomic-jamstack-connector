@@ -2,12 +2,12 @@
 /**
  * Main Plugin Bootstrap Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Core;
+namespace AtomicJamstack\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -83,11 +83,11 @@ class Plugin {
 	 * @return void
 	 */
 	private function load_core_classes(): void {
-		require_once WPJAMSTACK_PATH . 'core/class-logger.php';
-		require_once WPJAMSTACK_PATH . 'core/class-queue-manager.php';
-		require_once WPJAMSTACK_PATH . 'core/class-sync-runner.php';
-		require_once WPJAMSTACK_PATH . 'core/class-git-api.php';
-		require_once WPJAMSTACK_PATH . 'core/class-media-processor.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-logger.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-queue-manager.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-sync-runner.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-git-api.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'core/class-media-processor.php';
 	}
 
 	/**
@@ -114,11 +114,11 @@ class Plugin {
 	 * @return void
 	 */
 	private function load_admin(): void {
-		require_once WPJAMSTACK_PATH . 'admin/class-settings.php';
-		require_once WPJAMSTACK_PATH . 'admin/class-columns.php';
-		require_once WPJAMSTACK_PATH . 'admin/class-admin.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-settings.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-columns.php';
+		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-admin.php';
 		
-		\WPJamstack\Admin\Admin::init();
+		\AtomicJamstack\Admin\Admin::init();
 	}
 
 	/**
@@ -130,8 +130,8 @@ class Plugin {
 	 */
 	private function load_cli(): void {
 		// TODO: Load CLI classes when implemented
-		// require_once WPJAMSTACK_PATH . 'cli/class-cli.php';
-		// WP_CLI::add_command( 'jamstack', 'WPJamstack\CLI\CLI' );
+		// require_once ATOMIC_JAMSTACK_PATH . 'cli/class-cli.php';
+		// WP_CLI::add_command( 'jamstack', 'AtomicJamstack\CLI\CLI' );
 	}
 
 	/**
@@ -308,7 +308,7 @@ class Plugin {
 	 * @return bool True if should sync, false otherwise.
 	 */
 	private static function should_sync_post_type( string $post_type ): bool {
-		$settings = get_option( 'wpjamstack_settings', array() );
+		$settings = get_option( 'atomic_jamstack_settings', array() );
 		$enabled_types = $settings['enabled_post_types'] ?? array( 'post' );
 
 		// Ensure it's an array

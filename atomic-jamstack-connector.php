@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: WP Jamstack Sync
- * Plugin URI: https://github.com/pcescato/wp-jamstack-sync
+ * Plugin Name: Atomic Jamstack Connector
+ * Plugin URI: https://github.com/pcescato/atomic-jamstack-connector
  * Description: Automated WordPress to Hugo publishing system with async GitHub API integration.
  * Version: 1.0.0
  * Requires at least: 6.9
@@ -9,7 +9,7 @@
  * Author: Pascal CESCATO
  * License: GPL 3+
  * License URI: https://www.gnu.org/licenses/gpl-3.0.html
- * Text Domain: wp-jamstack-sync
+ * Text Domain: atomic-jamstack-connector
  * Domain Path: /languages
  */
 
@@ -18,23 +18,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin constants
-define( 'WPJAMSTACK_VERSION', '1.0.0' );
-define( 'WPJAMSTACK_PATH', plugin_dir_path( __FILE__ ) );
-define( 'WPJAMSTACK_URL', plugin_dir_url( __FILE__ ) );
+define( 'ATOMIC_JAMSTACK_VERSION', '1.0.0' );
+define( 'ATOMIC_JAMSTACK_PATH', plugin_dir_path( __FILE__ ) );
+define( 'ATOMIC_JAMSTACK_URL', plugin_dir_url( __FILE__ ) );
 
 // Load Action Scheduler library before anything else
-if ( file_exists( WPJAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
-	require_once WPJAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+if ( file_exists( ATOMIC_JAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
+	require_once ATOMIC_JAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
 }
 
 // Load Composer autoloader if available
-if ( file_exists( WPJAMSTACK_PATH . 'vendor/autoload.php' ) ) {
-	require_once WPJAMSTACK_PATH . 'vendor/autoload.php';
+if ( file_exists( ATOMIC_JAMSTACK_PATH . 'vendor/autoload.php' ) ) {
+	require_once ATOMIC_JAMSTACK_PATH . 'vendor/autoload.php';
 }
 
 // Development .env loader (only in development environment)
 if ( function_exists( 'wp_get_environment_type' ) && 'development' === wp_get_environment_type() ) {
-	wpjamstack_load_env();
+	atomic_jamstack_load_env();
 }
 
 /**
@@ -42,8 +42,8 @@ if ( function_exists( 'wp_get_environment_type' ) && 'development' === wp_get_en
  *
  * @return void
  */
-function wpjamstack_load_env() {
-	$env_file = WPJAMSTACK_PATH . '.env';
+function atomic_jamstack_load_env() {
+	$env_file = ATOMIC_JAMSTACK_PATH . '.env';
 	
 	if ( ! file_exists( $env_file ) ) {
 		return;
@@ -83,7 +83,7 @@ function wpjamstack_load_env() {
  *
  * @return void
  */
-function wpjamstack_activate() {
+function atomic_jamstack_activate() {
 	global $wp_version;
 	
 	$errors = array();
@@ -92,7 +92,7 @@ function wpjamstack_activate() {
 	if ( version_compare( $wp_version, '6.9', '<' ) ) {
 		$errors[] = sprintf(
 			/* translators: %s: Required WordPress version */
-			__( 'WP Jamstack Sync requires WordPress %s or higher.', 'wp-jamstack-sync' ),
+			__( 'Atomic Jamstack Connector requires WordPress %s or higher.', 'atomic-jamstack-connector' ),
 			'6.9'
 		);
 	}
@@ -101,7 +101,7 @@ function wpjamstack_activate() {
 	if ( version_compare( PHP_VERSION, '8.1', '<' ) ) {
 		$errors[] = sprintf(
 			/* translators: %s: Required PHP version */
-			__( 'WP Jamstack Sync requires PHP %s or higher.', 'wp-jamstack-sync' ),
+			__( 'Atomic Jamstack Connector requires PHP %s or higher.', 'atomic-jamstack-connector' ),
 			'8.1'
 		);
 	}
@@ -113,11 +113,11 @@ function wpjamstack_activate() {
 		
 		// Show error message
 		wp_die(
-			'<h1>' . esc_html__( 'Plugin Activation Failed', 'wp-jamstack-sync' ) . '</h1>' .
+			'<h1>' . esc_html__( 'Plugin Activation Failed', 'atomic-jamstack-connector' ) . '</h1>' .
 			'<p>' . implode( '</p><p>', array_map( 'esc_html', $errors ) ) . '</p>' .
 			'<p><a href="' . esc_url( admin_url( 'plugins.php' ) ) . '">' .
-			esc_html__( 'Return to Plugins', 'wp-jamstack-sync' ) . '</a></p>',
-			esc_html__( 'Plugin Activation Error', 'wp-jamstack-sync' ),
+			esc_html__( 'Return to Plugins', 'atomic-jamstack-connector' ) . '</a></p>',
+			esc_html__( 'Plugin Activation Error', 'atomic-jamstack-connector' ),
 			array( 'back_link' => true )
 		);
 	}
@@ -131,17 +131,17 @@ function wpjamstack_activate() {
  *
  * @return void
  */
-function wpjamstack_deactivate() {
+function atomic_jamstack_deactivate() {
 	// Future cleanup tasks go here
 	// (e.g., clear scheduled tasks, flush caches)
 }
 
 // Register activation/deactivation hooks
-register_activation_hook( __FILE__, 'wpjamstack_activate' );
-register_deactivation_hook( __FILE__, 'wpjamstack_deactivate' );
+register_activation_hook( __FILE__, 'atomic_jamstack_activate' );
+register_deactivation_hook( __FILE__, 'atomic_jamstack_deactivate' );
 
 // Load main plugin class
-require_once WPJAMSTACK_PATH . 'core/class-plugin.php';
+require_once ATOMIC_JAMSTACK_PATH . 'core/class-plugin.php';
 
 // Initialize plugin
-\WPJamstack\Core\Plugin::get_instance();
+\AtomicJamstack\Core\Plugin::get_instance();

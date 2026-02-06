@@ -2,12 +2,12 @@
 /**
  * Admin UI Class
  *
- * @package WPJamstack
+ * @package AtomicJamstack
  */
 
 declare(strict_types=1);
 
-namespace WPJamstack\Admin;
+namespace AtomicJamstack\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -41,8 +41,8 @@ class Admin {
 	 */
 	public static function add_menu_pages(): void {
 		add_options_page(
-			__( 'Jamstack Sync Settings', 'wp-jamstack-sync' ),
-			__( 'Jamstack Sync', 'wp-jamstack-sync' ),
+			__( 'Jamstack Sync Settings', 'atomic-jamstack-connector' ),
+			__( 'Jamstack Sync', 'atomic-jamstack-connector' ),
 			'manage_options',
 			Settings::PAGE_SLUG,
 			array( Settings::class, 'render_page' )
@@ -64,32 +64,32 @@ class Admin {
 
 		// Enqueue admin styles
 		wp_enqueue_style(
-			'wpjamstack-admin',
-			WPJAMSTACK_URL . 'assets/css/admin.css',
+			'atomic-jamstack-admin',
+			ATOMIC_JAMSTACK_URL . 'assets/css/admin.css',
 			array(),
-			WPJAMSTACK_VERSION
+			ATOMIC_JAMSTACK_VERSION
 		);
 
 		// Enqueue admin scripts
 		wp_enqueue_script(
-			'wpjamstack-admin',
-			WPJAMSTACK_URL . 'assets/js/admin.js',
+			'atomic-jamstack-admin',
+			ATOMIC_JAMSTACK_URL . 'assets/js/admin.js',
 			array( 'jquery' ),
-			WPJAMSTACK_VERSION,
+			ATOMIC_JAMSTACK_VERSION,
 			true
 		);
 
 		// Localize script for AJAX
 		wp_localize_script(
-			'wpjamstack-admin',
-			'wpjamstackAdmin',
+			'atomic-jamstack-admin',
+			'atomicJamstackAdmin',
 			array(
 				'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
-				'testConnectionNonce' => wp_create_nonce( 'wpjamstack-test-connection' ),
+				'testConnectionNonce' => wp_create_nonce( 'atomic-jamstack-test-connection' ),
 				'strings'            => array(
-					'testing'  => __( 'Testing connection...', 'wp-jamstack-sync' ),
-					'success'  => __( 'Connection successful!', 'wp-jamstack-sync' ),
-					'error'    => __( 'Connection failed:', 'wp-jamstack-sync' ),
+					'testing'  => __( 'Testing connection...', 'atomic-jamstack-connector' ),
+					'success'  => __( 'Connection successful!', 'atomic-jamstack-connector' ),
+					'error'    => __( 'Connection failed:', 'atomic-jamstack-connector' ),
 				),
 			)
 		);
