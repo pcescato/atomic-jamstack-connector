@@ -445,10 +445,24 @@ class Git_API {
 	 */
 	public function get_file( string $path ): ?array {
 		if ( empty( $this->token ) || empty( $this->repo ) ) {
+			Logger::error(
+				'Cannot get file: missing configuration',
+				array( 'path' => $path )
+			);
 			return null;
 		}
 
 		$url = sprintf( '%s/repos/%s/contents/%s', $this->api_base, $this->repo, ltrim( $path, '/' ) );
+
+		Logger::info(
+			'Fetching file from GitHub',
+			array(
+				'path'   => $path,
+				'repo'   => $this->repo,
+				'branch' => $this->branch,
+				'url'    => $url,
+			)
+		);
 
 		$response = wp_remote_get(
 			$url,
@@ -463,16 +477,61 @@ class Git_API {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			Logger::error(
+				'Network error fetching file',
+				array(
+					'path'  => $path,
+					'error' => $response->get_error_message(),
+				)
+			);
 			return null;
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
+
+		if ( 404 === $status_code ) {
+			Logger::warning(
+				'File not found on GitHub (404)',
+				array(
+					'path'   => $path,
+					'repo'   => $this->repo,
+					'branch' => $this->branch,
+				)
+			);
+			return null;
+		}
+
 		if ( 200 !== $status_code ) {
+			$body = wp_remote_retrieve_body( $response );
+			Logger::error(
+				'GitHub API error fetching file',
+				array(
+					'path'     => $path,
+					'status'   => $status_code,
+					'response' => substr( $body, 0, 500 ),
+				)
+			);
 			return null;
 		}
 
 		$body = wp_remote_retrieve_body( $response );
 		$data = json_decode( $body, true );
+
+		if ( ! empty( $data['content'] ) ) {
+			$data['content'] = base64_decode( $data['content'] );
+		}
+
+		Logger::info(
+			'File fetched successfully',
+			array(
+				'path' => $path,
+				'sha'  => substr( $data['sha'] ?? 'unknown', 0, 7 ),
+				'size' => $data['size'] ?? 0,
+			)
+		);
+
+		return $data;
+	}
 
 		if ( ! empty( $data['content'] ) ) {
 			$data['content'] = base64_decode( $data['content'] );
@@ -500,8 +559,9 @@ class Git_API {
 		Logger::info(
 			'Attempting to delete file',
 			array(
-				'path' => $path,
-				'repo' => $this->repo,
+				'path'   => $path,
+				'repo'   => $this->repo,
+				'branch' => $this->branch,
 			)
 		);
 
@@ -510,9 +570,12 @@ class Git_API {
 
 		// Handle 404: file doesn't exist (already deleted or never synced)
 		if ( null === $file_data ) {
-			Logger::info(
-				'File not found on GitHub (already deleted or never synced)',
-				array( 'path' => $path )
+			Logger::warning(
+				'File not found on GitHub - cannot delete (404)',
+				array(
+					'path'   => $path,
+					'reason' => 'File may have been manually deleted or never synced',
+				)
 			);
 			return true; // Not an error - file is gone, which is what we want
 		}

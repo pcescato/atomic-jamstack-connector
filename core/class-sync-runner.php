@@ -251,7 +251,14 @@ class Sync_Runner {
 		$deleted = array();
 
 		// Delete Markdown file
-		Logger::info( 'Deleting Markdown file', array( 'path' => $file_path ) );
+		Logger::info(
+			'Starting Markdown file deletion',
+			array(
+				'post_id'   => $post_id,
+				'file_path' => $file_path,
+				'method'    => $post ? 'Hugo_Adapter' : 'cached',
+			)
+		);
 
 		$result = $git_api->delete_file(
 			$file_path,
@@ -262,15 +269,23 @@ class Sync_Runner {
 			Logger::error(
 				'Failed to delete Markdown file',
 				array(
-					'path'  => $file_path,
-					'error' => $result->get_error_message(),
+					'post_id' => $post_id,
+					'path'    => $file_path,
+					'error'   => $result->get_error_message(),
+					'code'    => $result->get_error_code(),
 				)
 			);
 			return $result;
 		}
 
 		$deleted[] = $file_path;
-		Logger::success( 'Markdown file deleted', array( 'path' => $file_path ) );
+		Logger::success(
+			'Markdown file deleted successfully',
+			array(
+				'post_id' => $post_id,
+				'path'    => $file_path,
+			)
+		);
 
 		// Delete images directory
 		$images_dir = "static/images/{$post_id}";
