@@ -31,6 +31,8 @@ class Columns {
 		add_filter( 'manage_posts_columns', array( __CLASS__, 'add_column' ) );
 		add_action( 'manage_posts_custom_column', array( __CLASS__, 'render_column' ), 10, 2 );
 		add_action( 'admin_head', array( __CLASS__, 'add_column_styles' ) );
+		add_filter( 'post_row_actions', array( __CLASS__, 'add_row_actions' ), 10, 2 );
+		add_action( 'wp_ajax_jamstack_sync_now', array( __CLASS__, 'ajax_sync_now' ) );
 	}
 
 	/**
@@ -180,5 +182,140 @@ class Columns {
 			}
 		</style>
 		<?php
+	}
+
+	/**
+	 * Add row actions to post list
+	 *
+	 * Adds "Sync Now" link to post row actions.
+	 *
+	 * @param array    $actions Existing actions.
+	 * @param \WP_Post $post    Post object.
+	 *
+	 * @return array Modified actions.
+	 */
+	public static function add_row_actions( array $actions, \WP_Post $post ): array {
+		// Only show for published posts
+		if ( 'publish' !== $post->post_status ) {
+			return $actions;
+		}
+
+		// Only show for 'post' post type
+		if ( 'post' !== $post->post_type ) {
+			return $actions;
+		}
+
+		$status = Queue_Manager::get_status( $post->ID );
+
+		// Don't show if already processing
+		if ( Queue_Manager::STATUS_PROCESSING === $status ) {
+			return $actions;
+		}
+
+		$nonce = wp_create_nonce( 'jamstack_sync_now_' . $post->ID );
+		$url   = admin_url( 'admin-ajax.php' );
+
+		$actions['jamstack_sync'] = sprintf(
+			'<a href="#" class="jamstack-sync-now" data-post-id="%d" data-nonce="%s" data-ajax-url="%s">%s</a>',
+			esc_attr( $post->ID ),
+			esc_attr( $nonce ),
+			esc_url( $url ),
+			esc_html__( 'Sync Now', 'wp-jamstack-sync' )
+		);
+
+		// Add inline script for AJAX handling (only once)
+		static $script_added = false;
+		if ( ! $script_added ) {
+			add_action( 'admin_footer', array( __CLASS__, 'add_sync_now_script' ) );
+			$script_added = true;
+		}
+
+		return $actions;
+	}
+
+	/**
+	 * Add inline script for Sync Now AJAX
+	 *
+	 * @return void
+	 */
+	public static function add_sync_now_script(): void {
+		?>
+		<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			$(document).on('click', '.jamstack-sync-now', function(e) {
+				e.preventDefault();
+				
+				var $link = $(this);
+				var postId = $link.data('post-id');
+				var nonce = $link.data('nonce');
+				var ajaxUrl = $link.data('ajax-url');
+				
+				// Disable link and show loading
+				$link.css('opacity', '0.5').text('<?php echo esc_js( __( 'Syncing...', 'wp-jamstack-sync' ) ); ?>');
+				
+				$.ajax({
+					url: ajaxUrl,
+					type: 'POST',
+					data: {
+						action: 'jamstack_sync_now',
+						post_id: postId,
+						nonce: nonce
+					},
+					success: function(response) {
+						if (response.success) {
+							$link.text('<?php echo esc_js( __( 'Enqueued!', 'wp-jamstack-sync' ) ); ?>');
+							// Reload page after 1 second to show updated status
+							setTimeout(function() {
+								location.reload();
+							}, 1000);
+						} else {
+							$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'wp-jamstack-sync' ) ); ?>');
+							alert(response.data || '<?php echo esc_js( __( 'Failed to sync', 'wp-jamstack-sync' ) ); ?>');
+						}
+					},
+					error: function() {
+						$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'wp-jamstack-sync' ) ); ?>');
+						alert('<?php echo esc_js( __( 'AJAX error', 'wp-jamstack-sync' ) ); ?>');
+					}
+				});
+			});
+		});
+		</script>
+		<?php
+	}
+
+	/**
+	 * AJAX handler for Sync Now action
+	 *
+	 * @return void
+	 */
+	public static function ajax_sync_now(): void {
+		// Get post ID
+		$post_id = isset( $_POST['post_id'] ) ? (int) $_POST['post_id'] : 0;
+
+		// Verify nonce
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'jamstack_sync_now_' . $post_id ) ) {
+			wp_send_json_error( __( 'Security check failed', 'wp-jamstack-sync' ) );
+			return;
+		}
+
+		// Check user permissions
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			wp_send_json_error( __( 'Insufficient permissions', 'wp-jamstack-sync' ) );
+			return;
+		}
+
+		// Verify post exists and is published
+		$post = get_post( $post_id );
+		if ( ! $post || 'publish' !== $post->post_status ) {
+			wp_send_json_error( __( 'Post not found or not published', 'wp-jamstack-sync' ) );
+			return;
+		}
+
+		// Enqueue the post
+		Queue_Manager::enqueue( $post_id );
+
+		wp_send_json_success( __( 'Post enqueued for sync', 'wp-jamstack-sync' ) );
 	}
 }

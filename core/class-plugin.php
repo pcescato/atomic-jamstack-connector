@@ -141,9 +141,69 @@ class Plugin {
 	 * @return void
 	 */
 	private function register_hooks(): void {
-		// TODO: Register hooks when business logic is implemented
-		// add_action( 'save_post', [ $this, 'handle_post_save' ], 10, 2 );
-		// add_action( 'transition_post_status', [ $this, 'handle_status_transition' ], 10, 3 );
+		// Use wp_after_insert_post (WP 5.6+) for reliable post save detection
+		// This fires after post and meta are fully saved
+		add_action( 'wp_after_insert_post', array( $this, 'handle_post_save' ), 10, 4 );
+	}
+
+	/**
+	 * Handle post save events
+	 *
+	 * Triggered when a post is saved or updated.
+	 * Enqueues eligible posts for sync.
+	 *
+	 * @param int      $post_id     Post ID.
+	 * @param \WP_Post $post        Post object.
+	 * @param bool     $update      Whether this is an update.
+	 * @param \WP_Post $post_before Post object before update.
+	 *
+	 * @return void
+	 */
+	public function handle_post_save( int $post_id, \WP_Post $post, bool $update, $post_before ): void {
+		// Skip autosaves
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+
+		// Skip revisions
+		if ( wp_is_post_revision( $post_id ) ) {
+			return;
+		}
+
+		// Skip auto-drafts
+		if ( 'auto-draft' === $post->post_status ) {
+			return;
+		}
+
+		// Only sync published posts
+		if ( 'publish' !== $post->post_status ) {
+			Logger::info(
+				'Skipping sync for non-published post',
+				array(
+					'post_id' => $post_id,
+					'status'  => $post->post_status,
+				)
+			);
+			return;
+		}
+
+		// Only sync 'post' post type by default
+		// TODO: Make this configurable in settings
+		if ( 'post' !== $post->post_type ) {
+			return;
+		}
+
+		Logger::info(
+			'Post saved, enqueuing for sync',
+			array(
+				'post_id' => $post_id,
+				'title'   => $post->post_title,
+				'update'  => $update,
+			)
+		);
+
+		// Enqueue for async processing
+		Queue_Manager::enqueue( $post_id );
 	}
 
 	/**

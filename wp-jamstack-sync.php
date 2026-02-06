@@ -22,6 +22,11 @@ define( 'WPJAMSTACK_VERSION', '1.0.0' );
 define( 'WPJAMSTACK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPJAMSTACK_URL', plugin_dir_url( __FILE__ ) );
 
+// Load Action Scheduler library before anything else
+if ( file_exists( WPJAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ) ) {
+	require_once WPJAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php';
+}
+
 // Load Composer autoloader if available
 if ( file_exists( WPJAMSTACK_PATH . 'vendor/autoload.php' ) ) {
 	require_once WPJAMSTACK_PATH . 'vendor/autoload.php';

@@ -96,6 +96,19 @@ class Queue_Manager {
 	 * @return void
 	 */
 	public static function enqueue( int $post_id, int $priority = 10 ): void {
+		// Check if Action Scheduler is available
+		if ( ! function_exists( 'as_enqueue_async_action' ) ) {
+			Logger::error(
+				'Action Scheduler not loaded - cannot enqueue jobs',
+				array(
+					'post_id'           => $post_id,
+					'function_exists'   => function_exists( 'as_enqueue_async_action' ),
+					'class_exists'      => class_exists( 'ActionScheduler' ),
+					'vendor_path_check' => file_exists( WPJAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ),
+				)
+			);
+		}
+
 		// Verify post exists
 		if ( ! get_post( $post_id ) ) {
 			Logger::error(
