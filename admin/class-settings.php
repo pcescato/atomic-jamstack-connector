@@ -63,6 +63,16 @@ class Settings {
 			return;
 		}
 
+		// Verify nonce for security (WordPress Settings API creates this)
+		// The nonce field name is: '_wpnonce' and the action is: '{option_group}-options'
+		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], self::PAGE_SLUG . '-options' ) ) {
+			wp_die(
+				esc_html__( 'Security check failed. Please try again.', 'atomic-jamstack-connector' ),
+				esc_html__( 'Security Error', 'atomic-jamstack-connector' ),
+				array( 'response' => 403 )
+			);
+		}
+
 		// Check if settings_tab was submitted
 		if ( isset( $_POST['settings_tab'] ) ) {
 			$settings_tab = sanitize_key( $_POST['settings_tab'] );

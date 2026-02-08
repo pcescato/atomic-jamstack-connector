@@ -25,12 +25,23 @@ if ( empty( $jamstack_settings['delete_data_on_uninstall'] ) ) {
 
 /**
  * User has opted in to clean uninstall - proceed with data deletion
+ * 
+ * IMPLEMENTATION NOTE:
+ * This uninstall script uses native WordPress APIs wherever possible:
+ * - delete_option() for plugin settings
+ * - delete_post_meta_by_key() for post meta
+ * - wp_cache_delete() for cache
+ * 
+ * Direct database queries are ONLY used where WordPress provides no API:
+ * - Pattern-based transient deletion (no delete_transient_by_pattern() exists)
+ * 
+ * All direct queries use $wpdb->prepare() for SQL injection protection.
  */
 
-// 1. Delete plugin options
+// 1. Delete plugin options using native WordPress API
 delete_option( 'atomic_jamstack_settings' );
 
-// 2. Delete all post meta created by the plugin
+// 2. Delete all post meta using native WordPress API
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 $jamstack_post_meta_keys = array(
 	'_jamstack_sync_status',        // Sync status (pending, processing, success, failed)
@@ -46,11 +57,14 @@ foreach ( $jamstack_post_meta_keys as $jamstack_meta_key ) {
 }
 
 // 3. Delete all transients (locks) created by the plugin
-// Note: WordPress doesn't have a built-in function to delete transients by pattern
-// We need to query the database directly for this
+// Note: WordPress doesn't provide an API to delete transients by pattern
+// Using direct database query is the only option for cleanup during uninstall
 global $wpdb;
 
 // Delete transients with the jamstack_lock_ prefix
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+// Reason: No WordPress API exists for pattern-based transient deletion
+// This only runs on uninstall (rare operation) and is properly prepared
 $wpdb->query(
 	$wpdb->prepare(
 		"DELETE FROM {$wpdb->options} 
@@ -60,6 +74,7 @@ $wpdb->query(
 		$wpdb->esc_like( '_transient_timeout_jamstack_lock_' ) . '%'
 	)
 );
+// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // 4. Delete Action Scheduler actions for this plugin (if any are queued)
 // Action Scheduler stores actions in custom tables or options
