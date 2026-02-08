@@ -59,13 +59,14 @@ class Settings {
 	 */
 	public static function handle_settings_redirect(): void {
 		// Check if we're saving settings
-		if ( ! isset( $_POST['option_page'] ) || $_POST['option_page'] !== self::PAGE_SLUG ) {
+		if ( ! isset( $_POST['option_page'] ) || sanitize_text_field( wp_unslash( $_POST['option_page'] ) ) !== self::PAGE_SLUG ) {
 			return;
 		}
 
 		// Verify nonce for security (WordPress Settings API creates this)
 		// The nonce field name is: '_wpnonce' and the action is: '{option_group}-options'
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], self::PAGE_SLUG . '-options' ) ) {
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, self::PAGE_SLUG . '-options' ) ) {
 			wp_die(
 				esc_html__( 'Security check failed. Please try again.', 'atomic-jamstack-connector' ),
 				esc_html__( 'Security Error', 'atomic-jamstack-connector' ),
@@ -75,7 +76,7 @@ class Settings {
 
 		// Check if settings_tab was submitted
 		if ( isset( $_POST['settings_tab'] ) ) {
-			$settings_tab = sanitize_key( $_POST['settings_tab'] );
+			$settings_tab = sanitize_key( wp_unslash( $_POST['settings_tab'] ) );
 			// Add filter to modify redirect URL
 			add_filter( 'wp_redirect', function( $location ) use ( $settings_tab ) {
 				return add_query_arg( 'settings_tab', $settings_tab, $location );
