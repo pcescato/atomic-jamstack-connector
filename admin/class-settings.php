@@ -141,6 +141,14 @@ class Settings {
 				self::PAGE_SLUG,
 				'atomic_jamstack_debug_section'
 			);
+
+			add_settings_field(
+				'delete_data_on_uninstall',
+				__( 'Delete data on uninstall', 'atomic-jamstack-connector' ),
+				array( __CLASS__, 'render_uninstall_field' ),
+				self::PAGE_SLUG,
+				'atomic_jamstack_debug_section'
+			);
 		}
 
 		// GITHUB CREDENTIALS TAB SECTIONS
@@ -234,6 +242,11 @@ class Settings {
 		// Note: Unchecked checkboxes don't appear in POST, only update if present
 		if ( isset( $input['debug_mode'] ) ) {
 			$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
+		}
+
+		// Sanitize delete data on uninstall checkbox
+		if ( isset( $input['delete_data_on_uninstall'] ) ) {
+			$sanitized['delete_data_on_uninstall'] = ! empty( $input['delete_data_on_uninstall'] );
 		}
 
 		// Sanitize enabled post types
@@ -460,6 +473,31 @@ class Settings {
 				}
 			}
 			?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Render delete data on uninstall checkbox
+	 *
+	 * @return void
+	 */
+	public static function render_uninstall_field(): void {
+		$settings = get_option( self::OPTION_NAME, array() );
+		$checked  = ! empty( $settings['delete_data_on_uninstall'] );
+		?>
+		<label>
+			<input 
+				type="checkbox" 
+				name="<?php echo esc_attr( self::OPTION_NAME ); ?>[delete_data_on_uninstall]" 
+				value="1"
+				<?php checked( $checked ); ?>
+			/>
+			<?php esc_html_e( 'Permanently delete all plugin data when uninstalling', 'atomic-jamstack-connector' ); ?>
+		</label>
+		<p class="description" style="color: #d63638;">
+			<strong><?php esc_html_e( 'Warning:', 'atomic-jamstack-connector' ); ?></strong>
+			<?php esc_html_e( 'If checked, all settings and synchronization logs will be permanently deleted from the database when the plugin is uninstalled. This action cannot be undone.', 'atomic-jamstack-connector' ); ?>
 		</p>
 		<?php
 	}
