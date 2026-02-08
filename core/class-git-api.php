@@ -88,6 +88,63 @@ class Git_API {
 	}
 
 	/**
+	 * Parse repository string into owner and repo parts
+	 *
+	 * Safely handles null or invalid repository strings.
+	 *
+	 * @return array{0: string, 1: string}|\WP_Error Array with [owner, repo] or WP_Error on failure.
+	 */
+	private function parse_repo(): array|\WP_Error {
+		if ( null === $this->repo || empty( $this->repo ) ) {
+			Logger::error(
+				'GitHub repository not configured',
+				array( 'repo' => $this->repo )
+			);
+			return new \WP_Error(
+				'repo_not_configured',
+				__( 'GitHub repository is not configured. Please check your settings.', 'atomic-jamstack-connector' )
+			);
+		}
+
+		if ( ! is_string( $this->repo ) ) {
+			Logger::error(
+				'GitHub repository is not a string',
+				array( 'repo' => $this->repo, 'type' => gettype( $this->repo ) )
+			);
+			return new \WP_Error(
+				'repo_invalid_type',
+				__( 'GitHub repository setting has invalid type.', 'atomic-jamstack-connector' )
+			);
+		}
+
+		if ( false === strpos( $this->repo, '/' ) ) {
+			Logger::error(
+				'GitHub repository format invalid (missing /)',
+				array( 'repo' => $this->repo )
+			);
+			return new \WP_Error(
+				'repo_invalid_format',
+				__( 'GitHub repository must be in format "owner/repo".', 'atomic-jamstack-connector' )
+			);
+		}
+
+		$parts = explode( '/', $this->repo, 2 );
+		
+		if ( count( $parts ) !== 2 || empty( $parts[0] ) || empty( $parts[1] ) ) {
+			Logger::error(
+				'GitHub repository format invalid (empty parts)',
+				array( 'repo' => $this->repo, 'parts' => $parts )
+			);
+			return new \WP_Error(
+				'repo_invalid_format',
+				__( 'GitHub repository must be in format "owner/repo".', 'atomic-jamstack-connector' )
+			);
+		}
+
+		return $parts;
+	}
+
+	/**
 	 * Decrypt GitHub token
 	 *
 	 * @param string $encrypted_token Encrypted token.
@@ -429,12 +486,19 @@ class Git_API {
 					'User-Agent'    => 'WP-Jamstack-Sync/' . ATOMIC_JAMSTACK_VERSION,
 				),
 				'body'    => wp_json_encode( $body ),
-				'timeout' => 30,
+				'timeout' => 60, // Increased timeout for slow networks
 			)
 		);
 
 		if ( is_wp_error( $response ) ) {
-			Logger::error( 'Failed to create/update file', array( 'path' => $path, 'error' => $response->get_error_message() ) );
+			Logger::error(
+				'Failed to create/update file',
+				array(
+					'path'          => $path,
+					'error_code'    => $response->get_error_code(),
+					'error_message' => $response->get_error_message(),
+				)
+			);
 			return $response;
 		}
 
@@ -442,11 +506,18 @@ class Git_API {
 		$body_data   = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( ! in_array( $status_code, array( 200, 201 ), true ) ) {
-			Logger::error( 'GitHub API error on file create/update', array( 'path' => $path, 'status' => $status_code ) );
+			Logger::error(
+				'GitHub API error on file create/update',
+				array(
+					'path'   => $path,
+					'status' => $status_code,
+					'body'   => $body_data,
+				)
+			);
 			return new \WP_Error( 'api_error', $body_data['message'] ?? 'Failed to create/update file' );
 		}
 
-		Logger::success( 'File created/updated on GitHub', array( 'path' => $path ) );
+		Logger::success( 'File created/updated on GitHub', array( 'path' => $path, 'status' => $status_code ) );
 		return $body_data;
 	}
 
@@ -620,7 +691,7 @@ class Git_API {
 				'method'  => 'DELETE',
 				'headers' => $this->get_headers(),
 				'body'    => wp_json_encode( $body ),
-				'timeout' => 15,
+				'timeout' => 60, // Increased timeout for slow networks
 			)
 		);
 
@@ -628,8 +699,9 @@ class Git_API {
 			Logger::error(
 				'Network error during file deletion',
 				array(
-					'path'  => $path,
-					'error' => $response->get_error_message(),
+					'path'          => $path,
+					'error_code'    => $response->get_error_code(),
+					'error_message' => $response->get_error_message(),
 				)
 			);
 			return $response;
@@ -907,7 +979,12 @@ class Git_API {
 	 * @return array|\WP_Error Reference data or error.
 	 */
 	private function get_branch_ref(): array|\WP_Error {
-		list( $owner, $repo ) = explode( '/', $this->repo );
+		$repo_parts = $this->parse_repo();
+		if ( is_wp_error( $repo_parts ) ) {
+			return $repo_parts;
+		}
+		
+		list( $owner, $repo ) = $repo_parts;
 		$url = sprintf(
 			'https://api.github.com/repos/%s/%s/git/refs/heads/%s',
 			$owner,
@@ -948,7 +1025,12 @@ class Git_API {
 	 * @return array|\WP_Error Commit data or error.
 	 */
 	private function get_commit_data( string $commit_sha ): array|\WP_Error {
-		list( $owner, $repo ) = explode( '/', $this->repo );
+		$repo_parts = $this->parse_repo();
+		if ( is_wp_error( $repo_parts ) ) {
+			return $repo_parts;
+		}
+		
+		list( $owner, $repo ) = $repo_parts;
 		$url = sprintf(
 			'https://api.github.com/repos/%s/%s/git/commits/%s',
 			$owner,
@@ -989,7 +1071,12 @@ class Git_API {
 	 * @return string|\WP_Error Blob SHA or error.
 	 */
 	private function create_blob( string $content ): string|\WP_Error {
-		list( $owner, $repo ) = explode( '/', $this->repo );
+		$repo_parts = $this->parse_repo();
+		if ( is_wp_error( $repo_parts ) ) {
+			return $repo_parts;
+		}
+		
+		list( $owner, $repo ) = $repo_parts;
 		$url = sprintf(
 			'https://api.github.com/repos/%s/%s/git/blobs',
 			$owner,
@@ -1006,25 +1093,58 @@ class Git_API {
 			array(
 				'headers' => $this->get_headers(),
 				'body'    => $payload,
-				'timeout' => 60, // Longer timeout for large files
+				'timeout' => 60, // Increased timeout for slow networks
 			)
 		);
 
+		// Log detailed response information
 		if ( is_wp_error( $response ) ) {
+			Logger::error(
+				'GitHub API request failed (create_blob)',
+				array(
+					'url'           => $url,
+					'error_code'    => $response->get_error_code(),
+					'error_message' => $response->get_error_message(),
+					'timeout'       => 60,
+				)
+			);
 			return $response;
 		}
 
 		$status = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		
+		Logger::info(
+			'GitHub API response (create_blob)',
+			array(
+				'url'        => $url,
+				'status'     => $status,
+				'body_size'  => strlen( $body ),
+			)
+		);
+		
 		if ( 201 !== $status ) {
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			$body_data = json_decode( $body, true );
+			$error_message = $body_data['message'] ?? 'Failed to create blob';
+			
+			Logger::error(
+				'GitHub API returned non-success status (create_blob)',
+				array(
+					'url'     => $url,
+					'status'  => $status,
+					'message' => $error_message,
+					'body'    => $body_data,
+				)
+			);
+			
 			return new \WP_Error(
 				'api_error',
-				$body['message'] ?? 'Failed to create blob',
-				array( 'status' => $status )
+				$error_message,
+				array( 'status' => $status, 'body' => $body_data )
 			);
 		}
 
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		$data = json_decode( $body, true );
 		return $data['sha'];
 	}
 
@@ -1037,7 +1157,12 @@ class Git_API {
 	 * @return string|\WP_Error Tree SHA or error.
 	 */
 	private function create_tree( array $tree_items, string $base_tree ): string|\WP_Error {
-		list( $owner, $repo ) = explode( '/', $this->repo );
+		$repo_parts = $this->parse_repo();
+		if ( is_wp_error( $repo_parts ) ) {
+			return $repo_parts;
+		}
+		
+		list( $owner, $repo ) = $repo_parts;
 		$url = sprintf(
 			'https://api.github.com/repos/%s/%s/git/trees',
 			$owner,
@@ -1054,25 +1179,59 @@ class Git_API {
 			array(
 				'headers' => $this->get_headers(),
 				'body'    => $payload,
-				'timeout' => 45,
+				'timeout' => 60, // Increased timeout for slow networks
 			)
 		);
 
+		// Log detailed response information
 		if ( is_wp_error( $response ) ) {
+			Logger::error(
+				'GitHub API request failed (create_tree)',
+				array(
+					'url'           => $url,
+					'error_code'    => $response->get_error_code(),
+					'error_message' => $response->get_error_message(),
+					'tree_items'    => count( $tree_items ),
+					'timeout'       => 60,
+				)
+			);
 			return $response;
 		}
 
 		$status = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		
+		Logger::info(
+			'GitHub API response (create_tree)',
+			array(
+				'url'         => $url,
+				'status'      => $status,
+				'tree_items'  => count( $tree_items ),
+			)
+		);
+		
 		if ( 201 !== $status ) {
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			$body_data = json_decode( $body, true );
+			$error_message = $body_data['message'] ?? 'Failed to create tree';
+			
+			Logger::error(
+				'GitHub API returned non-success status (create_tree)',
+				array(
+					'url'     => $url,
+					'status'  => $status,
+					'message' => $error_message,
+					'body'    => $body_data,
+				)
+			);
+			
 			return new \WP_Error(
 				'api_error',
-				$body['message'] ?? 'Failed to create tree',
-				array( 'status' => $status )
+				$error_message,
+				array( 'status' => $status, 'body' => $body_data )
 			);
 		}
 
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		$data = json_decode( $body, true );
 		return $data['sha'];
 	}
 
@@ -1086,7 +1245,12 @@ class Git_API {
 	 * @return string|\WP_Error Commit SHA or error.
 	 */
 	private function create_commit( string $message, string $tree_sha, string $parent_sha ): string|\WP_Error {
-		list( $owner, $repo ) = explode( '/', $this->repo );
+		$repo_parts = $this->parse_repo();
+		if ( is_wp_error( $repo_parts ) ) {
+			return $repo_parts;
+		}
+		
+		list( $owner, $repo ) = $repo_parts;
 		$url = sprintf(
 			'https://api.github.com/repos/%s/%s/git/commits',
 			$owner,
@@ -1104,25 +1268,57 @@ class Git_API {
 			array(
 				'headers' => $this->get_headers(),
 				'body'    => $payload,
-				'timeout' => 30,
+				'timeout' => 60, // Increased timeout for slow networks
 			)
 		);
 
+		// Log detailed response information
 		if ( is_wp_error( $response ) ) {
+			Logger::error(
+				'GitHub API request failed (create_commit)',
+				array(
+					'url'           => $url,
+					'error_code'    => $response->get_error_code(),
+					'error_message' => $response->get_error_message(),
+					'timeout'       => 60,
+				)
+			);
 			return $response;
 		}
 
 		$status = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		
+		Logger::info(
+			'GitHub API response (create_commit)',
+			array(
+				'url'    => $url,
+				'status' => $status,
+			)
+		);
+		
 		if ( 201 !== $status ) {
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			$body_data = json_decode( $body, true );
+			$error_message = $body_data['message'] ?? 'Failed to create commit';
+			
+			Logger::error(
+				'GitHub API returned non-success status (create_commit)',
+				array(
+					'url'     => $url,
+					'status'  => $status,
+					'message' => $error_message,
+					'body'    => $body_data,
+				)
+			);
+			
 			return new \WP_Error(
 				'api_error',
-				$body['message'] ?? 'Failed to create commit',
-				array( 'status' => $status )
+				$error_message,
+				array( 'status' => $status, 'body' => $body_data )
 			);
 		}
 
-		$data = json_decode( wp_remote_retrieve_body( $response ), true );
+		$data = json_decode( $body, true );
 		return $data['sha'];
 	}
 
@@ -1134,7 +1330,12 @@ class Git_API {
 	 * @return array|\WP_Error Updated reference data or error.
 	 */
 	private function update_ref( string $commit_sha ): array|\WP_Error {
-		list( $owner, $repo ) = explode( '/', $this->repo );
+		$repo_parts = $this->parse_repo();
+		if ( is_wp_error( $repo_parts ) ) {
+			return $repo_parts;
+		}
+		
+		list( $owner, $repo ) = $repo_parts;
 		$url = sprintf(
 			'https://api.github.com/repos/%s/%s/git/refs/heads/%s',
 			$owner,
@@ -1153,24 +1354,56 @@ class Git_API {
 				'method'  => 'PATCH',
 				'headers' => $this->get_headers(),
 				'body'    => $payload,
-				'timeout' => 30,
+				'timeout' => 60, // Increased timeout for slow networks
 			)
 		);
 
+		// Log detailed response information
 		if ( is_wp_error( $response ) ) {
+			Logger::error(
+				'GitHub API request failed (update_ref)',
+				array(
+					'url'           => $url,
+					'error_code'    => $response->get_error_code(),
+					'error_message' => $response->get_error_message(),
+					'timeout'       => 60,
+				)
+			);
 			return $response;
 		}
 
 		$status = wp_remote_retrieve_response_code( $response );
+		$body = wp_remote_retrieve_body( $response );
+		
+		Logger::info(
+			'GitHub API response (update_ref)',
+			array(
+				'url'    => $url,
+				'status' => $status,
+			)
+		);
+		
 		if ( 200 !== $status ) {
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+			$body_data = json_decode( $body, true );
+			$error_message = $body_data['message'] ?? 'Failed to update reference';
+			
+			Logger::error(
+				'GitHub API returned non-success status (update_ref)',
+				array(
+					'url'     => $url,
+					'status'  => $status,
+					'message' => $error_message,
+					'body'    => $body_data,
+				)
+			);
+			
 			return new \WP_Error(
 				'api_error',
-				$body['message'] ?? 'Failed to update reference',
-				array( 'status' => $status )
+				$error_message,
+				array( 'status' => $status, 'body' => $body_data )
 			);
 		}
 
-		return json_decode( wp_remote_retrieve_body( $response ), true );
+		return json_decode( $body, true );
 	}
 }

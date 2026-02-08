@@ -26,13 +26,14 @@ class Sync_Runner {
 	 *
 	 * Pipeline:
 	 * 1. Validate post exists and is publishable
-	 * 2. Process featured image (if set)
-	 * 3. Process content images
-	 * 4. Upload images to GitHub
-	 * 5. Convert to Markdown via Hugo adapter (with image path mapping)
-	 * 6. Upload Markdown to GitHub via API
-	 * 7. Update post meta with sync status and timestamp
-	 * 8. Return success metadata or WP_Error
+	 * 2. Test GitHub connection before heavy processing
+	 * 3. Process featured image (if set)
+	 * 4. Process content images
+	 * 5. Upload images to GitHub
+	 * 6. Convert to Markdown via Hugo adapter (with image path mapping)
+	 * 7. Upload Markdown to GitHub via API
+	 * 8. Update post meta with sync status and timestamp
+	 * 9. Return success metadata or WP_Error
 	 *
 	 * @param int $post_id Post ID to synchronize.
 	 *
@@ -41,148 +42,214 @@ class Sync_Runner {
 	public static function run( int $post_id ): array|\WP_Error {
 		Logger::info( 'Sync runner started', array( 'post_id' => $post_id ) );
 
+		// Record sync start time for safety timeout
+		update_post_meta( $post_id, '_jamstack_sync_start_time', time() );
+
+		// Check for safety timeout (5 minutes)
+		self::check_safety_timeout( $post_id );
+
 		// Validate post
 		$post = get_post( $post_id );
 		if ( ! $post ) {
 			Logger::error( 'Post not found', array( 'post_id' => $post_id ) );
-			self::update_sync_meta( $post_id, 'error' );
+			self::update_sync_meta( $post_id, 'failed' );
 			return new \WP_Error( 'post_not_found', __( 'Post not found', 'atomic-jamstack-connector' ) );
 		}
 
 		// Only sync published posts
 		if ( 'publish' !== $post->post_status ) {
 			Logger::warning( 'Post not published, skipping sync', array( 'post_id' => $post_id, 'status' => $post->post_status ) );
-			self::update_sync_meta( $post_id, 'error' );
+			self::update_sync_meta( $post_id, 'failed' );
 			return new \WP_Error( 'post_not_published', __( 'Only published posts can be synced', 'atomic-jamstack-connector' ) );
 		}
 
-		// Initialize media processor
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-media-processor.php';
-		$media_processor = new Media_Processor();
+		// Test GitHub connection before heavy image processing to save resources
+		$git_api = new Git_API();
+		$connection_test = $git_api->test_connection();
+		
+		if ( is_wp_error( $connection_test ) ) {
+			Logger::error(
+				'GitHub connection test failed before sync',
+				array(
+					'post_id' => $post_id,
+					'error'   => $connection_test->get_error_message(),
+				)
+			);
+			self::update_sync_meta( $post_id, 'failed' );
+			return $connection_test;
+		}
 
-		// Collect featured image data
-		$featured_data = $media_processor->get_featured_image_data( $post_id );
-		$featured_image_path = ! empty( $featured_data ) ? sprintf( '/images/%d/featured.webp', $post_id ) : '';
+		Logger::info( 'GitHub connection validated', array( 'post_id' => $post_id ) );
 
-		// Collect content images data
-		$images_result = $media_processor->get_post_images_data( $post_id, $post->post_content );
-		$image_files = $images_result['files'] ?? array();
-		$image_mapping = $images_result['mappings'] ?? array();
-
-		// Load adapter
-		require_once ATOMIC_JAMSTACK_PATH . 'adapters/interface-adapter.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
-
-		$adapter = new \AtomicJamstack\Adapters\Hugo_Adapter();
-
-		// Convert to Markdown with image path replacements and featured image
+		// Initialize media processor and result
+		$media_processor = null;
+		$sync_result = null;
+		$sync_error = null;
+		
 		try {
+			// Set status to processing
+			self::update_sync_meta( $post_id, 'processing' );
+			
+			// Wrap entire sync process in try-catch-finally for robust error handling
+			require_once ATOMIC_JAMSTACK_PATH . 'core/class-media-processor.php';
+			$media_processor = new Media_Processor();
+
+			// Collect featured image data
+			$featured_data = $media_processor->get_featured_image_data( $post_id );
+			$featured_image_path = ! empty( $featured_data ) ? sprintf( '/images/%d/featured.webp', $post_id ) : '';
+
+			// Collect content images data
+			$images_result = $media_processor->get_post_images_data( $post_id, $post->post_content );
+			$image_files = $images_result['files'] ?? array();
+			$image_mapping = $images_result['mappings'] ?? array();
+
+			// Load adapter
+			require_once ATOMIC_JAMSTACK_PATH . 'adapters/interface-adapter.php';
+			require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
+
+			$adapter = new \AtomicJamstack\Adapters\Hugo_Adapter();
+
+			// Convert to Markdown with image path replacements and featured image
 			$markdown_content = $adapter->convert( $post, $image_mapping, $featured_image_path );
 			$file_path = $adapter->get_file_path( $post );
-		} catch ( \Exception $e ) {
-			Logger::error(
-				'Adapter conversion failed',
-				array(
-					'post_id' => $post_id,
-					'error'   => $e->getMessage(),
-				)
-			);
-			self::update_sync_meta( $post_id, 'error' );
 
-			// Cleanup temp files
-			$media_processor->cleanup_temp_files( $post_id );
+			// Build payload for atomic commit
+			$payload = array();
 
-			return new \WP_Error( 'conversion_failed', $e->getMessage() );
-		}
+			// Add Markdown file
+			$payload[ $file_path ] = $markdown_content;
 
-		// Build payload for atomic commit
-		$payload = array();
+			// Add featured images
+			$payload = array_merge( $payload, $featured_data );
 
-		// Add Markdown file
-		$payload[ $file_path ] = $markdown_content;
+			// Add content images
+			$payload = array_merge( $payload, $image_files );
 
-		// Add featured images
-		$payload = array_merge( $payload, $featured_data );
-
-		// Add content images
-		$payload = array_merge( $payload, $image_files );
-
-		// Check payload size (10MB limit per ADR-04)
-		$total_size = 0;
-		foreach ( $payload as $content ) {
-			$total_size += strlen( $content );
-		}
-
-		if ( $total_size > 10485760 ) { // 10MB in bytes
-			Logger::warning(
-				'Payload exceeds 10MB limit',
-				array(
-					'post_id' => $post_id,
-					'size_mb' => round( $total_size / 1048576, 2 ),
-					'files'   => count( $payload ),
-				)
-			);
-		}
-
-		Logger::info(
-			'Atomic commit payload prepared',
-			array(
-				'post_id' => $post_id,
-				'files'   => count( $payload ),
-				'size_kb' => round( $total_size / 1024, 2 ),
-			)
-		);
-
-		// Create atomic commit
-		$git_api = new Git_API();
-		$commit_message = sprintf(
-			'%s: %s',
-			'Update', // We don't know if create or update in atomic mode
-			$post->post_title
-		);
-
-		$result = $git_api->create_atomic_commit( $payload, $commit_message );
-
-		// Cleanup temp files regardless of result
-		$media_processor->cleanup_temp_files( $post_id );
-
-		if ( is_wp_error( $result ) ) {
-			Logger::error(
-				'Sync aborted: Atomic failure',
-				array(
-					'post_id' => $post_id,
-					'error'   => $result->get_error_message(),
-				)
-			);
-			self::update_sync_meta( $post_id, 'error' );
-			return $result;
-		}
-
-		// Update success meta
-		self::update_sync_meta( $post_id, 'success' );
-
-		// Cache file path for future deletions
-		update_post_meta( $post_id, '_jamstack_file_path', $file_path );
-
-		// Save commit URL for monitoring dashboard
-		if ( isset( $result['commit_sha'] ) ) {
-			$settings   = get_option( 'atomic_jamstack_settings', array() );
-			$repo       = isset( $settings['github_repo'] ) ? $settings['github_repo'] : '';
-			if ( ! empty( $repo ) ) {
-				$commit_url = sprintf( 'https://github.com/%s/commit/%s', $repo, $result['commit_sha'] );
-				update_post_meta( $post_id, '_jamstack_last_commit_url', $commit_url );
-				Logger::info( 'Commit URL saved', array( 'post_id' => $post_id, 'url' => $commit_url ) );
+			// Check payload size (10MB limit per ADR-04)
+			$total_size = 0;
+			foreach ( $payload as $content ) {
+				$total_size += strlen( $content );
 			}
+
+			if ( $total_size > 10485760 ) { // 10MB in bytes
+				Logger::warning(
+					'Payload exceeds 10MB limit',
+					array(
+						'post_id' => $post_id,
+						'size_mb' => round( $total_size / 1048576, 2 ),
+						'files'   => count( $payload ),
+					)
+				);
+			}
+
+			Logger::info(
+				'Atomic commit payload prepared',
+				array(
+					'post_id' => $post_id,
+					'files'   => count( $payload ),
+					'size_kb' => round( $total_size / 1024, 2 ),
+				)
+			);
+
+			// Create atomic commit
+			$commit_message = sprintf(
+				'%s: %s',
+				'Update', // We don't know if create or update in atomic mode
+				$post->post_title
+			);
+
+			$result = $git_api->create_atomic_commit( $payload, $commit_message );
+
+			if ( is_wp_error( $result ) ) {
+				Logger::error(
+					'Sync aborted: Atomic commit failed',
+					array(
+						'post_id' => $post_id,
+						'error'   => $result->get_error_message(),
+					)
+				);
+				
+				// Store error for finally block
+				$sync_error = $result;
+				return $result;
+			}
+
+			// Cache file path for future deletions
+			update_post_meta( $post_id, '_jamstack_file_path', $file_path );
+
+			// Save commit URL for monitoring dashboard
+			if ( isset( $result['commit_sha'] ) ) {
+				$settings   = get_option( 'atomic_jamstack_settings', array() );
+				$repo       = isset( $settings['github_repo'] ) ? $settings['github_repo'] : '';
+				if ( ! empty( $repo ) ) {
+					$commit_url = sprintf( 'https://github.com/%s/commit/%s', $repo, $result['commit_sha'] );
+					update_post_meta( $post_id, '_jamstack_last_commit_url', $commit_url );
+					Logger::info( 'Commit URL saved', array( 'post_id' => $post_id, 'url' => $commit_url ) );
+				}
+			}
+
+			Logger::success( 'Sync completed', array( 'post_id' => $post_id, 'result' => $result ) );
+
+			// Store success result for finally block
+			$sync_result = array(
+				'post_id'   => $post_id,
+				'success'   => true,
+				'commit'    => $result,
+				'file_path' => $file_path,
+			);
+
+			return $sync_result;
+
+		} catch ( \Exception $e ) {
+			// Catch any unexpected errors during sync
+			Logger::error(
+				'Sync failed with exception',
+				array(
+					'post_id'   => $post_id,
+					'error'     => $e->getMessage(),
+					'file'      => $e->getFile(),
+					'line'      => $e->getLine(),
+					'trace'     => $e->getTraceAsString(),
+				)
+			);
+			
+			$sync_error = new \WP_Error( 'sync_exception', $e->getMessage() );
+			return $sync_error;
+			
+		} catch ( \Throwable $e ) {
+			// Catch fatal errors (PHP 7+)
+			Logger::error(
+				'Sync failed with fatal error',
+				array(
+					'post_id'   => $post_id,
+					'error'     => $e->getMessage(),
+					'file'      => $e->getFile(),
+					'line'      => $e->getLine(),
+				)
+			);
+			
+			$sync_error = new \WP_Error( 'sync_fatal_error', $e->getMessage() );
+			return $sync_error;
+			
+		} finally {
+			// CRITICAL: Always cleanup temp files, even if script crashes
+			if ( $media_processor ) {
+				$media_processor->cleanup_temp_files( $post_id );
+				Logger::info( 'Temp files cleaned up', array( 'post_id' => $post_id ) );
+			}
+			
+			// CRITICAL: Always update sync status, even if script crashes
+			if ( null !== $sync_error || is_wp_error( $sync_error ) ) {
+				self::update_sync_meta( $post_id, 'failed' );
+				Logger::warning( 'Sync status set to failed in finally block', array( 'post_id' => $post_id ) );
+			} elseif ( null !== $sync_result ) {
+				self::update_sync_meta( $post_id, 'success' );
+				Logger::info( 'Sync status set to success in finally block', array( 'post_id' => $post_id ) );
+			}
+			
+			// Clear start time
+			delete_post_meta( $post_id, '_jamstack_sync_start_time' );
 		}
-
-		Logger::success( 'Sync completed', array( 'post_id' => $post_id, 'result' => $result ) );
-
-		return array(
-			'post_id'   => $post_id,
-			'success'   => true,
-			'commit'    => $result,
-			'file_path' => $file_path,
-		);
 	}
 
 	/**
@@ -227,6 +294,40 @@ class Sync_Runner {
 	private static function update_sync_meta( int $post_id, string $status ): void {
 		update_post_meta( $post_id, '_jamstack_sync_status', $status );
 		update_post_meta( $post_id, '_jamstack_sync_last', current_time( 'mysql' ) );
+	}
+
+	/**
+	 * Check for safety timeout on stuck syncs
+	 *
+	 * If a sync has been running for more than 5 minutes, consider it failed.
+	 * This prevents posts from being permanently stuck in "processing" status.
+	 *
+	 * @param int $post_id Post ID.
+	 *
+	 * @return void
+	 */
+	private static function check_safety_timeout( int $post_id ): void {
+		$start_time = get_post_meta( $post_id, '_jamstack_sync_start_time', true );
+		
+		if ( ! $start_time ) {
+			return; // No sync in progress
+		}
+		
+		$elapsed = time() - (int) $start_time;
+		
+		// Safety timeout: 5 minutes (300 seconds)
+		if ( $elapsed > 300 ) {
+			Logger::error(
+				'Sync timeout detected - forcing status to failed',
+				array(
+					'post_id' => $post_id,
+					'elapsed' => $elapsed,
+				)
+			);
+			
+			self::update_sync_meta( $post_id, 'failed' );
+			delete_post_meta( $post_id, '_jamstack_sync_start_time' );
+		}
 	}
 
 	/**

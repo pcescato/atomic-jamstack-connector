@@ -523,70 +523,97 @@ class Queue_Manager {
 			return;
 		}
 
-		// Check retry limit
-		$retry_count = (int) get_post_meta( $post_id, self::META_RETRY_COUNT, true );
-		if ( $retry_count >= self::MAX_RETRIES ) {
-			Logger::error(
-				'Max retries exceeded',
-				array(
-					'post_id'     => $post_id,
-					'retry_count' => $retry_count,
-				)
-			);
+		try {
+			// Check retry limit
+			$retry_count = (int) get_post_meta( $post_id, self::META_RETRY_COUNT, true );
+			if ( $retry_count >= self::MAX_RETRIES ) {
+				Logger::error(
+					'Max retries exceeded',
+					array(
+						'post_id'     => $post_id,
+						'retry_count' => $retry_count,
+					)
+				);
 
-			// Update to error status and release lock
-			update_post_meta( $post_id, self::META_STATUS, self::STATUS_ERROR );
-			self::release_lock( $post_id );
-			return;
-		}
+				// Update to error status
+				update_post_meta( $post_id, self::META_STATUS, self::STATUS_ERROR );
+				return;
+			}
 
-		// Update status to processing
-		update_post_meta( $post_id, self::META_STATUS, self::STATUS_PROCESSING );
+			// Update status to processing
+			update_post_meta( $post_id, self::META_STATUS, self::STATUS_PROCESSING );
 
-		Logger::info(
-			'Starting sync process',
-			array(
-				'post_id' => $post_id,
-				'title'   => $post->post_title,
-				'attempt' => $retry_count + 1,
-			)
-		);
-
-		// Delegate to Sync_Runner (all real work happens there)
-		$result = Sync_Runner::run( $post_id );
-
-		// Update status based on result
-		if ( is_wp_error( $result ) ) {
-			update_post_meta( $post_id, self::META_STATUS, self::STATUS_ERROR );
-
-			Logger::error(
-				'Sync failed',
+			Logger::info(
+				'Starting sync process',
 				array(
 					'post_id' => $post_id,
-					'error'   => $result->get_error_message(),
-					'code'    => $result->get_error_code(),
+					'title'   => $post->post_title,
 					'attempt' => $retry_count + 1,
 				)
 			);
-		} else {
-			// Success - reset retry counter
-			update_post_meta( $post_id, self::META_STATUS, self::STATUS_SUCCESS );
-			update_post_meta( $post_id, self::META_TIMESTAMP, time() );
-			delete_post_meta( $post_id, self::META_RETRY_COUNT );
 
-			Logger::success(
-				'Sync completed',
+			// Delegate to Sync_Runner (all real work happens there)
+			$result = Sync_Runner::run( $post_id );
+
+			// Update status based on result
+			if ( is_wp_error( $result ) ) {
+				update_post_meta( $post_id, self::META_STATUS, self::STATUS_ERROR );
+
+				Logger::error(
+					'Sync failed',
+					array(
+						'post_id' => $post_id,
+						'error'   => $result->get_error_message(),
+						'code'    => $result->get_error_code(),
+						'attempt' => $retry_count + 1,
+					)
+				);
+			} else {
+				// Success - reset retry counter
+				update_post_meta( $post_id, self::META_STATUS, self::STATUS_SUCCESS );
+				update_post_meta( $post_id, self::META_TIMESTAMP, time() );
+				delete_post_meta( $post_id, self::META_RETRY_COUNT );
+
+				Logger::success(
+					'Sync completed',
+					array(
+						'post_id' => $post_id,
+						'result'  => $result,
+					)
+				);
+			}
+
+			Logger::info( 'Sync processing completed', array( 'post_id' => $post_id ) );
+			
+		} catch ( \Exception $e ) {
+			// Catch any unexpected errors
+			Logger::error(
+				'Sync task failed with exception',
 				array(
 					'post_id' => $post_id,
-					'result'  => $result,
+					'error'   => $e->getMessage(),
+					'file'    => $e->getFile(),
+					'line'    => $e->getLine(),
 				)
 			);
+			update_post_meta( $post_id, self::META_STATUS, self::STATUS_ERROR );
+			
+		} catch ( \Throwable $e ) {
+			// Catch fatal errors (PHP 7+)
+			Logger::error(
+				'Sync task failed with fatal error',
+				array(
+					'post_id' => $post_id,
+					'error'   => $e->getMessage(),
+				)
+			);
+			update_post_meta( $post_id, self::META_STATUS, self::STATUS_ERROR );
+			
+		} finally {
+			// CRITICAL: Always release lock, even if script crashes
+			self::release_lock( $post_id );
+			Logger::info( 'Lock released for post', array( 'post_id' => $post_id ) );
 		}
-
-		// Always release lock
-		self::release_lock( $post_id );
-
-		Logger::info( 'Sync processing completed', array( 'post_id' => $post_id ) );
 	}
 
 	/**
@@ -615,37 +642,65 @@ class Queue_Manager {
 			return;
 		}
 
-		// Execute deletion via Sync_Runner
-		$result = Sync_Runner::delete( $post_id );
+		try {
+			// Execute deletion via Sync_Runner
+			$result = Sync_Runner::delete( $post_id );
 
-		if ( is_wp_error( $result ) ) {
+			if ( is_wp_error( $result ) ) {
+				Logger::error(
+					'Deletion failed',
+					array(
+						'post_id' => $post_id,
+						'error'   => $result->get_error_message(),
+					)
+				);
+
+				update_post_meta( $post_id, self::META_STATUS, 'delete_error' );
+				update_post_meta( $post_id, self::META_TIMESTAMP, time() );
+			} else {
+				Logger::success(
+					'Deletion completed successfully',
+					array(
+						'post_id' => $post_id,
+						'deleted' => $result['deleted'] ?? array(),
+					)
+				);
+
+				update_post_meta( $post_id, self::META_STATUS, 'deleted' );
+				update_post_meta( $post_id, self::META_TIMESTAMP, time() );
+			}
+
+			Logger::info( 'Deletion processing completed', array( 'post_id' => $post_id ) );
+			
+		} catch ( \Exception $e ) {
+			// Catch any unexpected errors
 			Logger::error(
-				'Deletion failed',
+				'Deletion task failed with exception',
 				array(
 					'post_id' => $post_id,
-					'error'   => $result->get_error_message(),
+					'error'   => $e->getMessage(),
+					'file'    => $e->getFile(),
+					'line'    => $e->getLine(),
 				)
 			);
-
 			update_post_meta( $post_id, self::META_STATUS, 'delete_error' );
-			update_post_meta( $post_id, self::META_TIMESTAMP, time() );
-		} else {
-			Logger::success(
-				'Deletion completed successfully',
+			
+		} catch ( \Throwable $e ) {
+			// Catch fatal errors (PHP 7+)
+			Logger::error(
+				'Deletion task failed with fatal error',
 				array(
 					'post_id' => $post_id,
-					'deleted' => $result['deleted'] ?? array(),
+					'error'   => $e->getMessage(),
 				)
 			);
-
-			update_post_meta( $post_id, self::META_STATUS, 'deleted' );
-			update_post_meta( $post_id, self::META_TIMESTAMP, time() );
+			update_post_meta( $post_id, self::META_STATUS, 'delete_error' );
+			
+		} finally {
+			// CRITICAL: Always release lock, even if script crashes
+			self::release_lock( $post_id );
+			Logger::info( 'Lock released for deletion', array( 'post_id' => $post_id ) );
 		}
-
-		// Release lock
-		self::release_lock( $post_id );
-
-		Logger::info( 'Deletion processing completed', array( 'post_id' => $post_id ) );
 	}
 
 	/**

@@ -182,19 +182,24 @@ class Settings {
 	/**
 	 * Sanitize settings before saving
 	 *
+	 * IMPORTANT: Uses merge logic to prevent data loss when saving from tabbed interface.
+	 * Only fields present in $input are updated, all other existing settings are preserved.
+	 *
 	 * @param array $input Raw input values.
 	 *
-	 * @return array Sanitized values.
+	 * @return array Sanitized values merged with existing settings.
 	 */
 	public static function sanitize_settings( array $input ): array {
+		// CRITICAL: Load existing settings first to preserve fields not in current POST
+		$existing_settings = get_option( self::OPTION_NAME, array() );
 		$sanitized = array();
 
 		// Sanitize repository (owner/repo format)
-		if ( ! empty( $input['github_repo'] ) ) {
+		if ( isset( $input['github_repo'] ) ) {
 			$sanitized['github_repo'] = sanitize_text_field( $input['github_repo'] );
 
-			// Validate format
-			if ( substr_count( $sanitized['github_repo'], '/' ) !== 1 ) {
+			// Validate format if not empty
+			if ( ! empty( $sanitized['github_repo'] ) && substr_count( $sanitized['github_repo'], '/' ) !== 1 ) {
 				add_settings_error(
 					self::OPTION_NAME,
 					'invalid_repo',
@@ -205,48 +210,44 @@ class Settings {
 		}
 
 		// Sanitize branch
-		if ( ! empty( $input['github_branch'] ) ) {
-			$sanitized['github_branch'] = sanitize_text_field( $input['github_branch'] );
-		} else {
-			$sanitized['github_branch'] = 'main';
+		if ( isset( $input['github_branch'] ) ) {
+			$sanitized['github_branch'] = ! empty( $input['github_branch'] ) 
+				? sanitize_text_field( $input['github_branch'] ) 
+				: 'main';
 		}
 
 		// Sanitize and encrypt token
-		// IMPORTANT: Only update token if a new value is provided
-		// This prevents overwriting the existing token with empty value
-		if ( ! empty( $input['github_token'] ) ) {
+		// CRITICAL: Only update token if present in POST and not empty/masked
+		// This prevents token loss when saving from other tabs
+		if ( isset( $input['github_token'] ) ) {
 			$token = sanitize_text_field( trim( $input['github_token'] ) );
-			// Only update if not the masked placeholder
-			if ( $token !== '••••••••••••••••' ) {
+			
+			// Only update if not empty and not the masked placeholder
+			if ( ! empty( $token ) && $token !== '••••••••••••••••' ) {
 				$sanitized['github_token'] = self::encrypt_token( $token );
-			} else {
-				// Keep existing token
-				$existing_settings = get_option( self::OPTION_NAME, array() );
-				if ( ! empty( $existing_settings['github_token'] ) ) {
-					$sanitized['github_token'] = $existing_settings['github_token'];
-				}
 			}
-		} else {
-			// Keep existing token if input is empty
-			$existing_settings = get_option( self::OPTION_NAME, array() );
-			if ( ! empty( $existing_settings['github_token'] ) ) {
-				$sanitized['github_token'] = $existing_settings['github_token'];
-			}
+			// If empty or masked, the merge will keep existing token
 		}
+		// If not in POST at all (different tab), merge will preserve existing token
 
 		// Sanitize debug mode checkbox
-		$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
+		// Note: Unchecked checkboxes don't appear in POST, only update if present
+		if ( isset( $input['debug_mode'] ) ) {
+			$sanitized['debug_mode'] = ! empty( $input['debug_mode'] );
+		}
 
 		// Sanitize enabled post types
-		if ( ! empty( $input['enabled_post_types'] ) && is_array( $input['enabled_post_types'] ) ) {
-			// Only allow 'post' and 'page'
-			$sanitized['enabled_post_types'] = array_intersect(
-				$input['enabled_post_types'],
-				array( 'post', 'page' )
-			);
-		} else {
-			// Default to posts only
-			$sanitized['enabled_post_types'] = array( 'post' );
+		if ( isset( $input['enabled_post_types'] ) ) {
+			if ( ! empty( $input['enabled_post_types'] ) && is_array( $input['enabled_post_types'] ) ) {
+				// Only allow 'post' and 'page'
+				$sanitized['enabled_post_types'] = array_intersect(
+					$input['enabled_post_types'],
+					array( 'post', 'page' )
+				);
+			} else {
+				// If field is present but empty, set default
+				$sanitized['enabled_post_types'] = array( 'post' );
+			}
 		}
 
 		// Sanitize Front Matter template
@@ -261,7 +262,12 @@ class Settings {
 			$sanitized['hugo_front_matter_template'] = sanitize_textarea_field( $template );
 		}
 
-		return $sanitized;
+		// CRITICAL: Merge sanitized values with existing settings
+		// This ensures fields not present in current POST are preserved
+		// Example: When saving General tab, Credentials tab fields are kept
+		$merged_settings = array_merge( $existing_settings, $sanitized );
+
+		return $merged_settings;
 	}
 
 	/**
