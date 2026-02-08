@@ -427,7 +427,33 @@ class Settings {
 			<?php esc_html_e( 'Enable detailed logging for debugging', 'atomic-jamstack-connector' ); ?>
 		</label>
 		<p class="description">
-			<?php esc_html_e( 'Logs will be written to wp-content/uploads/atomic-jamstack-logs/', 'atomic-jamstack-connector' ); ?>
+			<?php
+			esc_html_e( 'Logs will be written to wp-content/uploads/atomic-jamstack-logs/', 'atomic-jamstack-connector' );
+			
+			// Show log file path if debug is enabled
+			if ( $checked ) {
+				$log_file = \AtomicJamstack\Core\Logger::get_log_file_path();
+				if ( $log_file ) {
+					echo '<br>';
+					printf(
+						/* translators: %s: log file path */
+						esc_html__( 'Current log file: %s', 'atomic-jamstack-connector' ),
+						'<code>' . esc_html( $log_file ) . '</code>'
+					);
+					
+					if ( file_exists( $log_file ) ) {
+						$file_size = size_format( filesize( $log_file ) );
+						echo ' (' . esc_html( $file_size ) . ')';
+					} else {
+						echo ' <span style="color: #d63638;">(' . esc_html__( 'File not created yet', 'atomic-jamstack-connector' ) . ')</span>';
+					}
+				} else {
+					echo '<br><span style="color: #d63638;">';
+					esc_html_e( 'Warning: Upload directory is not accessible. Logs will only go to WordPress debug.log', 'atomic-jamstack-connector' );
+					echo '</span>';
+				}
+			}
+			?>
 		</p>
 		<?php
 	}

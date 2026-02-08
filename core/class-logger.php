@@ -60,7 +60,7 @@ class Logger {
 		// Write to WordPress debug log if enabled
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( 'WP-Jamstack-Sync: ' . $log_entry );
+			error_log( 'Atomic-Jamstack-Connector: ' . $log_entry );
 		}
 
 		// Write to plugin log file
@@ -89,25 +89,50 @@ class Logger {
 	 */
 	private static function write_to_file( string $log_entry ): void {
 		$upload_dir = wp_upload_dir();
+		
+		// Check if upload directory is accessible
+		if ( ! empty( $upload_dir['error'] ) ) {
+			// Can't write to log file, silently fail
+			return;
+		}
+		
 		$log_dir = $upload_dir['basedir'] . '/atomic-jamstack-logs';
 
 		// Create log directory if it doesn't exist
 		if ( ! file_exists( $log_dir ) ) {
-			wp_mkdir_p( $log_dir );
+			$created = wp_mkdir_p( $log_dir );
+			
+			if ( ! $created ) {
+				// Failed to create directory, silently fail
+				return;
+			}
 			
 			// Add .htaccess to protect logs
 			$htaccess = $log_dir . '/.htaccess';
 			if ( ! file_exists( $htaccess ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-				file_put_contents( $htaccess, 'Deny from all' );
+				file_put_contents( $htaccess, "# Protect log files\nDeny from all\n<FilesMatch \"\\.(log)$\">\n  Deny from all\n</FilesMatch>" );
+			}
+			
+			// Add index.php to prevent directory listing
+			$index_file = $log_dir . '/index.php';
+			if ( ! file_exists( $index_file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+				file_put_contents( $index_file, "<?php\n// Silence is golden.\n" );
 			}
 		}
 
 		$log_file = $log_dir . '/atomic-jamstack-' . gmdate( 'Y-m-d' ) . '.log';
 
-		// Append to log file
+		// Append to log file with error handling
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		file_put_contents( $log_file, $log_entry . PHP_EOL, FILE_APPEND );
+		$result = @file_put_contents( $log_file, $log_entry . PHP_EOL, FILE_APPEND );
+		
+		// If file writing fails, try to log to WordPress debug log as fallback
+		if ( false === $result && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'Atomic-Jamstack-Connector: Failed to write to log file: ' . $log_file );
+		}
 	}
 
 	/**
@@ -184,5 +209,38 @@ class Logger {
 	 */
 	public static function error( string $message, array $context = array() ): void {
 		self::log( self::LEVEL_ERROR, $message, $context );
+	}
+
+	/**
+	 * Get log file path for current date
+	 *
+	 * @return string|false Log file path or false if upload dir not accessible.
+	 */
+	public static function get_log_file_path() {
+		$upload_dir = wp_upload_dir();
+		
+		if ( ! empty( $upload_dir['error'] ) ) {
+			return false;
+		}
+		
+		$log_dir = $upload_dir['basedir'] . '/atomic-jamstack-logs';
+		$log_file = $log_dir . '/atomic-jamstack-' . gmdate( 'Y-m-d' ) . '.log';
+		
+		return $log_file;
+	}
+
+	/**
+	 * Get log directory path
+	 *
+	 * @return string|false Log directory path or false if upload dir not accessible.
+	 */
+	public static function get_log_dir_path() {
+		$upload_dir = wp_upload_dir();
+		
+		if ( ! empty( $upload_dir['error'] ) ) {
+			return false;
+		}
+		
+		return $upload_dir['basedir'] . '/atomic-jamstack-logs';
 	}
 }
