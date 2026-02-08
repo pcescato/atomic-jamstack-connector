@@ -556,45 +556,70 @@ class Settings {
 	}
 
 	/**
-	 * Render settings page
+	 * Render settings page (with sub-tabs for General/Credentials)
 	 *
 	 * @return void
 	 */
-	public static function render_page(): void {
+	public static function render_settings_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
+			wp_die(
+				esc_html__( 'You do not have sufficient permissions to access this page.', 'atomic-jamstack-connector' )
+			);
 		}
 
-		// Get active tab
-		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'settings'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// Get active settings sub-tab
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$settings_tab = isset( $_GET['settings_tab'] ) ? sanitize_key( $_GET['settings_tab'] ) : 'general';
 		?>
 		<div class="wrap atomic-jamstack-settings-wrap">
-			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+			<h1><?php esc_html_e( 'Jamstack Sync Settings', 'atomic-jamstack-connector' ); ?></h1>
 			
-			<!-- Main Tab Navigation -->
-			<h2 class="nav-tab-wrapper">
-				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings" 
-				   class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Settings', 'atomic-jamstack-connector' ); ?>
-				</a>
-				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=bulk" 
-				   class="nav-tab <?php echo 'bulk' === $active_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Bulk Operations', 'atomic-jamstack-connector' ); ?>
-				</a>
-			</h2>
+			<!-- Settings Sub-Tab Navigation -->
+			<div class="atomic-jamstack-subtabs">
+				<h2 class="nav-tab-wrapper">
+					<a href="?page=jamstack-sync&settings_tab=general" 
+					   class="nav-tab <?php echo 'general' === $settings_tab ? 'nav-tab-active' : ''; ?>">
+						<?php esc_html_e( 'General', 'atomic-jamstack-connector' ); ?>
+					</a>
+					<a href="?page=jamstack-sync&settings_tab=credentials" 
+					   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
+						<?php esc_html_e( 'GitHub Credentials', 'atomic-jamstack-connector' ); ?>
+					</a>
+				</h2>
+			</div>
 
-			<?php
-			// Render active tab content
-			switch ( $active_tab ) {
-				case 'bulk':
-					self::render_bulk_tab();
-					break;
-				case 'settings':
-				default:
-					self::render_settings_tab();
-					break;
-			}
-			?>
+			<?php settings_errors( self::OPTION_NAME ); ?>
+			
+			<div class="atomic-jamstack-settings-form">
+				<form method="post" action="options.php">
+					<?php
+					settings_fields( self::PAGE_SLUG );
+					do_settings_sections( self::PAGE_SLUG );
+					submit_button();
+					?>
+					<!-- Hidden field to preserve active tab after save -->
+					<input type="hidden" name="settings_tab" value="<?php echo esc_attr( $settings_tab ); ?>" />
+				</form>
+			</div>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Render bulk operations page
+	 *
+	 * @return void
+	 */
+	public static function render_bulk_page(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die(
+				esc_html__( 'You do not have sufficient permissions to access this page.', 'atomic-jamstack-connector' )
+			);
+		}
+		?>
+		<div class="wrap atomic-jamstack-settings-wrap">
+			<h1><?php esc_html_e( 'Bulk Operations', 'atomic-jamstack-connector' ); ?></h1>
+			<?php self::render_bulk_tab(); ?>
 		</div>
 		<?php
 	}
@@ -611,50 +636,9 @@ class Settings {
 			);
 		}
 		?>
-		<div class="wrap">
+		<div class="wrap atomic-jamstack-settings-wrap">
 			<h1><?php esc_html_e( 'Sync History', 'atomic-jamstack-connector' ); ?></h1>
 			<?php self::render_monitor_tab(); ?>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Render settings tab content
-	 *
-	 * @return void
-	 */
-	private static function render_settings_tab(): void {
-		// Get active settings sub-tab
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		$settings_tab = isset( $_GET['settings_tab'] ) ? sanitize_key( $_GET['settings_tab'] ) : 'general';
-		?>
-		
-		<!-- Settings Sub-Tab Navigation -->
-		<div class="atomic-jamstack-subtabs">
-			<h2 class="nav-tab-wrapper">
-				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings&settings_tab=general" 
-				   class="nav-tab <?php echo 'general' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'General', 'atomic-jamstack-connector' ); ?>
-				</a>
-				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings&settings_tab=credentials" 
-				   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'GitHub Credentials', 'atomic-jamstack-connector' ); ?>
-				</a>
-			</h2>
-		</div>
-
-		<?php settings_errors( self::OPTION_NAME ); ?>
-		
-		<div class="atomic-jamstack-settings-form">
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( self::PAGE_SLUG );
-				do_settings_sections( self::PAGE_SLUG );
-				submit_button();
-				?>
-				<!-- Hidden field to preserve active tab after save -->
-				<input type="hidden" name="settings_tab" value="<?php echo esc_attr( $settings_tab ); ?>" />
-			</form>
 		</div>
 		<?php
 	}

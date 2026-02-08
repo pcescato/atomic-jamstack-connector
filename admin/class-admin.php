@@ -40,24 +40,45 @@ class Admin {
 	 * @return void
 	 */
 	public static function add_menu_pages(): void {
-		// Settings page - Admin only
-		add_options_page(
-			__( 'Jamstack Sync Settings', 'atomic-jamstack-connector' ),
+		// Main top-level menu - Visible to authors and above
+		add_menu_page(
 			__( 'Jamstack Sync', 'atomic-jamstack-connector' ),
-			'manage_options',
-			Settings::PAGE_SLUG,
-			array( Settings::class, 'render_page' )
+			__( 'Jamstack Sync', 'atomic-jamstack-connector' ),
+			'publish_posts',
+			'jamstack-sync',
+			array( Settings::class, 'render_settings_page' ),
+			'dashicons-cloud-upload',
+			26
 		);
 
-		// Sync History page - Authors and above
-		add_menu_page(
+		// Submenu 1: Settings (default) - Admin only
+		add_submenu_page(
+			'jamstack-sync',
+			__( 'Settings', 'atomic-jamstack-connector' ),
+			__( 'Settings', 'atomic-jamstack-connector' ),
+			'manage_options',
+			'jamstack-sync',
+			array( Settings::class, 'render_settings_page' )
+		);
+
+		// Submenu 2: Bulk Operations - Admin only
+		add_submenu_page(
+			'jamstack-sync',
+			__( 'Bulk Operations', 'atomic-jamstack-connector' ),
+			__( 'Bulk Operations', 'atomic-jamstack-connector' ),
+			'manage_options',
+			'jamstack-sync-bulk',
+			array( Settings::class, 'render_bulk_page' )
+		);
+
+		// Submenu 3: Sync History - Authors and above
+		add_submenu_page(
+			'jamstack-sync',
 			__( 'Sync History', 'atomic-jamstack-connector' ),
 			__( 'Sync History', 'atomic-jamstack-connector' ),
 			'publish_posts',
-			'atomic-jamstack-history',
-			array( Settings::class, 'render_history_page' ),
-			'dashicons-update',
-			26
+			'jamstack-sync-history',
+			array( Settings::class, 'render_history_page' )
 		);
 	}
 
@@ -69,10 +90,11 @@ class Admin {
 	 * @return void
 	 */
 	public static function enqueue_scripts( string $hook ): void {
-		// Load on both plugin settings page and history page
+		// Load on all Jamstack Sync pages
 		$allowed_pages = array(
-			'settings_page_' . Settings::PAGE_SLUG,
-			'toplevel_page_' . Settings::HISTORY_PAGE_SLUG,
+			'toplevel_page_jamstack-sync',         // Main menu/Settings
+			'jamstack-sync_page_jamstack-sync-bulk', // Bulk Operations submenu
+			'jamstack-sync_page_jamstack-sync-history', // Sync History submenu
 		);
 
 		if ( ! in_array( $hook, $allowed_pages, true ) ) {
