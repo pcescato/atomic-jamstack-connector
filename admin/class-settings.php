@@ -129,6 +129,22 @@ class Settings {
 			self::PAGE_SLUG,
 			'atomic_jamstack_posttypes_section'
 		);
+
+		// Hugo Settings Section
+		add_settings_section(
+			'atomic_jamstack_hugo_section',
+			__( 'Hugo Configuration', 'atomic-jamstack-connector' ),
+			array( __CLASS__, 'render_hugo_section' ),
+			self::PAGE_SLUG
+		);
+
+		add_settings_field(
+			'hugo_front_matter_template',
+			__( 'Custom Front Matter Template', 'atomic-jamstack-connector' ),
+			array( __CLASS__, 'render_front_matter_template_field' ),
+			self::PAGE_SLUG,
+			'atomic_jamstack_hugo_section'
+		);
 	}
 
 	/**
@@ -182,6 +198,18 @@ class Settings {
 		} else {
 			// Default to posts only
 			$sanitized['enabled_post_types'] = array( 'post' );
+		}
+
+		// Sanitize Front Matter template
+		// Allow necessary characters for YAML/TOML but prevent XSS
+		if ( isset( $input['hugo_front_matter_template'] ) ) {
+			// Strip potential script tags but preserve template structure
+			$template = $input['hugo_front_matter_template'];
+			// Remove any script/style tags
+			$template = preg_replace( '#<script[^>]*?>.*?</script>#is', '', $template );
+			$template = preg_replace( '#<style[^>]*?>.*?</style>#is', '', $template );
+			// Preserve the template as-is (it's just text data, not HTML to be rendered)
+			$sanitized['hugo_front_matter_template'] = sanitize_textarea_field( $template );
 		}
 
 		return $sanitized;
@@ -398,6 +426,53 @@ class Settings {
 			</label>
 			<?php
 		endforeach;
+	}
+
+	/**
+	 * Render Hugo section description
+	 *
+	 * @return void
+	 */
+	public static function render_hugo_section(): void {
+		echo '<p>';
+		esc_html_e( 'Customize how WordPress content is converted to Hugo Markdown format.', 'atomic-jamstack-connector' );
+		echo '</p>';
+	}
+
+	/**
+	 * Render front matter template field
+	 *
+	 * @return void
+	 */
+	public static function render_front_matter_template_field(): void {
+		$settings = get_option( self::OPTION_NAME, array() );
+		
+		// Default YAML template
+		$default = "---\ntitle: \"{{title}}\"\ndate: {{date}}\nauthor: \"{{author}}\"\ncover:\n  image: \"{{image_avif}}\"\n  alt: \"{{title}}\"\n---";
+		
+		$value = $settings['hugo_front_matter_template'] ?? $default;
+		?>
+		<textarea 
+			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[hugo_front_matter_template]" 
+			rows="12" 
+			cols="60" 
+			class="large-text code"
+			style="font-family: monospace;"
+		><?php echo esc_textarea( $value ); ?></textarea>
+		<p class="description">
+			<?php esc_html_e( 'Define your raw Front Matter here. You must include your own delimiters (e.g., --- for YAML or +++ for TOML).', 'atomic-jamstack-connector' ); ?>
+		</p>
+		<p class="description">
+			<?php esc_html_e( 'Available placeholders:', 'atomic-jamstack-connector' ); ?>
+			<code>{{title}}</code>, 
+			<code>{{date}}</code>, 
+			<code>{{author}}</code>, 
+			<code>{{slug}}</code>, 
+			<code>{{image_avif}}</code>, 
+			<code>{{image_webp}}</code>, 
+			<code>{{image_original}}</code>
+		</p>
+		<?php
 	}
 
 	/**

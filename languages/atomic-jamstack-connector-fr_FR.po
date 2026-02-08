@@ -478,3 +478,28 @@ msgstr "Seuls les articles publiés peuvent être synchronisés"
 #: core/class-sync-runner.php:219
 msgid "Post not found and no cached file path available"
 msgstr "Article introuvable et aucun chemin de fichier en cache disponible"
+
+
+#: admin/class-settings.php:136
+msgid "Hugo Configuration"
+msgstr "Configuration Hugo"
+
+
+#: admin/class-settings.php:143
+msgid "Custom Front Matter Template"
+msgstr "Modèle Front Matter personnalisé"
+
+
+#: admin/class-settings.php:438
+msgid "Customize how WordPress content is converted to Hugo Markdown format."
+msgstr "Personnalisez la conversion du contenu WordPress au format Markdown Hugo."
+
+
+#: admin/class-settings.php:463
+msgid "Define your raw Front Matter here. You must include your own delimiters (e.g., --- for YAML or +++ for TOML)."
+msgstr "Définissez votre Front Matter brut ici. Vous devez inclure vos propres délimiteurs (ex: --- pour YAML ou +++ pour TOML)."
+
+
+#: admin/class-settings.php:466
+msgid "Available placeholders:"
+msgstr "Espaces réservés disponibles :"

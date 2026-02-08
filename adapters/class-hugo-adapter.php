@@ -28,20 +28,76 @@ class Hugo_Adapter implements Adapter_Interface {
 	 * @param array    $image_mapping       Optional. Array mapping original URLs to new paths.
 	 * @param string   $featured_image_path Optional. Processed featured image path.
 	 *
-	 * @return string Complete Markdown content with YAML front matter.
+	 * @return string Complete Markdown content with front matter.
 	 */
 	public function convert( \WP_Post $post, array $image_mapping = array(), string $featured_image_path = '' ): string {
-		$front_matter = $this->get_front_matter( $post, $featured_image_path );
 		$content      = $this->convert_content( $post->post_content, $image_mapping );
+		$front_matter = $this->build_front_matter_from_template( $post, $featured_image_path );
 
-		// Build YAML front matter
-		$yaml = "---\n";
-		foreach ( $front_matter as $key => $value ) {
-			$yaml .= $this->format_yaml_field( $key, $value );
+		return $front_matter . "\n\n" . $content;
+	}
+
+	/**
+	 * Build front matter from user-defined template
+	 *
+	 * Replaces placeholders with actual post data.
+	 *
+	 * @param \WP_Post $post                WordPress post object.
+	 * @param string   $featured_image_path Optional. Processed featured image path.
+	 *
+	 * @return string Processed front matter with delimiters.
+	 */
+	private function build_front_matter_from_template( \WP_Post $post, string $featured_image_path = '' ): string {
+		// Get template from settings
+		$settings = get_option( 'atomic_jamstack_settings', array() );
+		
+		// Default YAML template
+		$default_template = "---\ntitle: \"{{title}}\"\ndate: {{date}}\nauthor: \"{{author}}\"\ncover:\n  image: \"{{image_avif}}\"\n  alt: \"{{title}}\"\n---";
+		
+		$template = $settings['hugo_front_matter_template'] ?? $default_template;
+
+		// Prepare replacement values
+		$author = get_userdata( $post->post_author );
+		$author_name = $author ? $author->display_name : 'Unknown';
+
+		// Prepare image paths
+		$image_avif = '';
+		$image_webp = '';
+		$image_original = '';
+
+		if ( ! empty( $featured_image_path ) ) {
+			// Use processed image paths
+			$post_id = $post->ID;
+			$image_avif = sprintf( '/images/%d/featured.avif', $post_id );
+			$image_webp = sprintf( '/images/%d/featured.webp', $post_id );
+			$image_original = $featured_image_path;
+		} else {
+			// Try to get original featured image
+			$original = $this->get_featured_image( $post->ID );
+			if ( $original ) {
+				$image_original = $original;
+			}
 		}
-		$yaml .= "---\n\n";
 
-		return $yaml . $content;
+		// Define placeholder replacements
+		$replacements = array(
+			'{{title}}'          => $post->post_title,
+			'{{date}}'           => get_the_date( 'c', $post ),
+			'{{author}}'         => $author_name,
+			'{{slug}}'           => $post->post_name,
+			'{{image_avif}}'     => $image_avif,
+			'{{image_webp}}'     => $image_webp,
+			'{{image_original}}' => $image_original,
+		);
+
+		// Replace placeholders
+		$processed = str_replace(
+			array_keys( $replacements ),
+			array_values( $replacements ),
+			$template
+		);
+
+		return $processed;
 	}
 
 	/**
