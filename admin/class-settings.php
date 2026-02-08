@@ -533,11 +533,10 @@ class Settings {
 		$value = $settings['hugo_front_matter_template'] ?? $default;
 		?>
 		<textarea 
+			id="<?php echo esc_attr( self::OPTION_NAME ); ?>[hugo_front_matter_template]"
 			name="<?php echo esc_attr( self::OPTION_NAME ); ?>[hugo_front_matter_template]" 
-			rows="12" 
-			cols="60" 
+			rows="15" 
 			class="large-text code"
-			style="font-family: monospace;"
 		><?php echo esc_textarea( $value ); ?></textarea>
 		<p class="description">
 			<?php esc_html_e( 'Define your raw Front Matter here. You must include your own delimiters (e.g., --- for YAML or +++ for TOML).', 'atomic-jamstack-connector' ); ?>
@@ -569,17 +568,17 @@ class Settings {
 		// Get active tab
 		$active_tab = isset( $_GET['tab'] ) ? sanitize_key( $_GET['tab'] ) : 'settings'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		?>
-		<div class="wrap">
+		<div class="wrap atomic-jamstack-settings-wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			
-			<!-- Tab Navigation -->
+			<!-- Main Tab Navigation -->
 			<h2 class="nav-tab-wrapper">
 				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings" 
-				   class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
+				   class="nav-tab <?php echo 'settings' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Settings', 'atomic-jamstack-connector' ); ?>
 				</a>
 				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=bulk" 
-				   class="nav-tab <?php echo $active_tab === 'bulk' ? 'nav-tab-active' : ''; ?>">
+				   class="nav-tab <?php echo 'bulk' === $active_tab ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Bulk Operations', 'atomic-jamstack-connector' ); ?>
 				</a>
 			</h2>
@@ -631,28 +630,32 @@ class Settings {
 		?>
 		
 		<!-- Settings Sub-Tab Navigation -->
-		<h3 class="nav-tab-wrapper" style="margin-top: 0;">
-			<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings&settings_tab=general" 
-			   class="nav-tab <?php echo 'general' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-				<?php esc_html_e( 'General', 'atomic-jamstack-connector' ); ?>
-			</a>
-			<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings&settings_tab=credentials" 
-			   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-				<?php esc_html_e( 'GitHub Credentials', 'atomic-jamstack-connector' ); ?>
-			</a>
-		</h3>
+		<div class="atomic-jamstack-subtabs">
+			<h2 class="nav-tab-wrapper">
+				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings&settings_tab=general" 
+				   class="nav-tab <?php echo 'general' === $settings_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'General', 'atomic-jamstack-connector' ); ?>
+				</a>
+				<a href="?page=<?php echo esc_attr( self::PAGE_SLUG ); ?>&tab=settings&settings_tab=credentials" 
+				   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'GitHub Credentials', 'atomic-jamstack-connector' ); ?>
+				</a>
+			</h2>
+		</div>
 
 		<?php settings_errors( self::OPTION_NAME ); ?>
 		
-		<form method="post" action="options.php">
-			<?php
-			settings_fields( self::PAGE_SLUG );
-			do_settings_sections( self::PAGE_SLUG );
-			submit_button();
-			?>
-			<!-- Hidden field to preserve active tab after save -->
-			<input type="hidden" name="settings_tab" value="<?php echo esc_attr( $settings_tab ); ?>" />
-		</form>
+		<div class="atomic-jamstack-settings-form">
+			<form method="post" action="options.php">
+				<?php
+				settings_fields( self::PAGE_SLUG );
+				do_settings_sections( self::PAGE_SLUG );
+				submit_button();
+				?>
+				<!-- Hidden field to preserve active tab after save -->
+				<input type="hidden" name="settings_tab" value="<?php echo esc_attr( $settings_tab ); ?>" />
+			</form>
+		</div>
 		<?php
 	}
 
