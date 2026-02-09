@@ -122,6 +122,14 @@ class Settings {
 				'atomic_jamstack_posttypes_section'
 			);
 
+			add_settings_field(
+				'adapter_type',
+				__( 'Publishing Destination', 'atomic-jamstack-connector' ),
+				array( __CLASS__, 'render_adapter_type_field' ),
+				self::PAGE_SLUG,
+				'atomic_jamstack_posttypes_section'
+			);
+
 			// Hugo Settings Section
 			add_settings_section(
 				'atomic_jamstack_hugo_section',
@@ -316,6 +324,15 @@ class Settings {
 			}
 		}
 
+		// Sanitize adapter type (publishing destination)
+		if ( isset( $input['adapter_type'] ) ) {
+			$adapter = $input['adapter_type'];
+			// Whitelist validation
+			$sanitized['adapter_type'] = in_array( $adapter, array( 'hugo', 'devto' ), true ) 
+				? $adapter 
+				: 'hugo';
+		}
+
 		// Sanitize Front Matter template
 		// Allow necessary characters for YAML/TOML but prevent XSS
 		if ( isset( $input['hugo_front_matter_template'] ) ) {
@@ -329,8 +346,25 @@ class Settings {
 		}
 
 		// Sanitize Dev.to API key
+		// CRITICAL: Only update if not empty, otherwise preserve existing
 		if ( isset( $input['devto_api_key'] ) ) {
-			$sanitized['devto_api_key'] = sanitize_text_field( trim( $input['devto_api_key'] ) );
+			$api_key = sanitize_text_field( trim( $input['devto_api_key'] ) );
+			
+			// Only update if not empty
+			if ( ! empty( $api_key ) ) {
+				$sanitized['devto_api_key'] = $api_key;
+			} else {
+				// Preserve existing API key if input is empty
+				if ( ! empty( $existing_settings['devto_api_key'] ) ) {
+					$sanitized['devto_api_key'] = $existing_settings['devto_api_key'];
+				}
+			}
+		} else {
+			// Field not in POST (saving from different tab)
+			// Explicitly preserve existing API key
+			if ( ! empty( $existing_settings['devto_api_key'] ) ) {
+				$sanitized['devto_api_key'] = $existing_settings['devto_api_key'];
+			}
 		}
 
 		// Sanitize Dev.to mode
@@ -340,15 +374,17 @@ class Settings {
 				? $mode 
 				: 'primary';
 		}
+		// Note: Mode field not explicitly preserved - array_merge will handle it
 
 		// Sanitize Dev.to canonical URL
 		if ( isset( $input['devto_canonical_url'] ) ) {
 			$url = esc_url_raw( trim( $input['devto_canonical_url'] ) );
-			// Validate URL has scheme
+			// Only set if valid URL with scheme, otherwise preserve existing or skip
 			if ( ! empty( $url ) && parse_url( $url, PHP_URL_SCHEME ) ) {
 				$sanitized['devto_canonical_url'] = rtrim( $url, '/' ); // Remove trailing slash
 			}
 		}
+		// Note: Canonical URL field not explicitly preserved - array_merge will handle it
 
 		// CRITICAL: Merge sanitized values with existing settings
 		// This ensures fields not present in current POST are preserved
@@ -628,6 +664,50 @@ class Settings {
 	}
 
 	/**
+	 * Render adapter type field (publishing destination selector)
+	 *
+	 * @return void
+	 */
+	public static function render_adapter_type_field(): void {
+		$settings = get_option( self::OPTION_NAME, array() );
+		$adapter  = $settings['adapter_type'] ?? 'hugo';
+
+		$adapters = array(
+			'hugo'  => array(
+				'label'       => __( 'GitHub Only (Hugo/Jekyll)', 'atomic-jamstack-connector' ),
+				'description' => __( 'Publish to Hugo/Jekyll static site via GitHub. Requires GitHub credentials.', 'atomic-jamstack-connector' ),
+			),
+			'devto' => array(
+				'label'       => __( 'Dev.to Publishing', 'atomic-jamstack-connector' ),
+				'description' => __( 'Publish to Dev.to. Mode determined by Dev.to settings: Primary (Dev.to only) or Secondary (GitHub first, then Dev.to with canonical URL).', 'atomic-jamstack-connector' ),
+			),
+		);
+
+		foreach ( $adapters as $type => $info ) :
+			?>
+			<label style="display: block; margin-bottom: 15px;">
+				<input
+					type="radio"
+					name="<?php echo esc_attr( self::OPTION_NAME ); ?>[adapter_type]"
+					value="<?php echo esc_attr( $type ); ?>"
+					<?php checked( $adapter, $type ); ?>
+				/>
+				<strong><?php echo esc_html( $info['label'] ); ?></strong>
+				<br />
+				<span class="description" style="margin-left: 20px;">
+					<?php echo esc_html( $info['description'] ); ?>
+				</span>
+			</label>
+			<?php
+		endforeach;
+		?>
+		<p class="description">
+			<?php esc_html_e( 'Configure credentials in the Credentials tab. For Dev.to Secondary mode, configure both GitHub and Dev.to credentials.', 'atomic-jamstack-connector' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
 	 * Render Hugo section description
 	 *
 	 * @return void
@@ -744,7 +824,7 @@ class Settings {
 				<strong><?php esc_html_e( 'Primary', 'atomic-jamstack-connector' ); ?></strong>
 			</label>
 			<p class="description">
-				<?php esc_html_e( 'Dev.to is the main publication (no canonical URL added)', 'atomic-jamstack-connector' ); ?>
+				<?php esc_html_e( 'Dev.to only - no GitHub sync. Dev.to is the main publication.', 'atomic-jamstack-connector' ); ?>
 			</p>
 
 			<br><br>
@@ -756,10 +836,10 @@ class Settings {
 					value="secondary" 
 					<?php checked( $mode, 'secondary' ); ?>
 				/>
-				<strong><?php esc_html_e( 'Secondary', 'atomic-jamstack-connector' ); ?></strong>
+				<strong><?php esc_html_e( 'Secondary (Dual Publishing)', 'atomic-jamstack-connector' ); ?></strong>
 			</label>
 			<p class="description">
-				<?php esc_html_e( 'Dev.to syndicates from another site (includes canonical_url to prevent SEO duplicate content)', 'atomic-jamstack-connector' ); ?>
+				<?php esc_html_e( 'GitHub first (canonical), then Dev.to syndication. Requires both GitHub and Dev.to credentials. Dev.to article includes canonical_url to prevent SEO duplicate content.', 'atomic-jamstack-connector' ); ?>
 			</p>
 		</fieldset>
 		<?php

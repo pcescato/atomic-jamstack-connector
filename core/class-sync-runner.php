@@ -66,14 +66,96 @@ class Sync_Runner {
 		// Determine adapter type from settings
 		$settings = get_option( 'atomic_jamstack_settings', array() );
 		$adapter_type = $settings['adapter_type'] ?? 'hugo';
+		$devto_mode   = $settings['devto_mode'] ?? 'primary';
 
 		// Route to appropriate sync flow
 		if ( 'devto' === $adapter_type ) {
+			// Check if secondary mode (dual publishing)
+			if ( 'secondary' === $devto_mode ) {
+				// DUAL PUBLISHING: GitHub first (canonical), then Dev.to (syndication)
+				Logger::info( 'Dual publishing mode: GitHub + Dev.to', array( 'post_id' => $post->ID ) );
+				return self::sync_dual_publish( $post );
+			}
+			
+			// Primary mode: Dev.to only
 			return self::sync_to_devto( $post );
 		}
 
-		// Default: GitHub/static site generator flow
+		// Default: GitHub/static site generator flow only
 		return self::sync_to_github( $post );
+	}
+
+	/**
+	 * Dual publish: GitHub first (canonical), then Dev.to (syndication)
+	 *
+	 * Used when Dev.to mode is 'secondary' - the Hugo site is the primary source,
+	 * and Dev.to syndicates with canonical_url pointing back to Hugo.
+	 *
+	 * @param \WP_Post $post WordPress post object.
+	 *
+	 * @return array|\WP_Error Combined results or WP_Error on failure.
+	 */
+	private static function sync_dual_publish( \WP_Post $post ): array|\WP_Error {
+		$post_id = $post->ID;
+		Logger::info( 'Starting dual publish workflow', array( 'post_id' => $post_id ) );
+
+		// STEP 1: Sync to GitHub (Hugo) - this is the canonical source
+		Logger::info( 'Step 1: Publishing to GitHub (canonical source)', array( 'post_id' => $post_id ) );
+		$github_result = self::sync_to_github( $post );
+
+		if ( is_wp_error( $github_result ) ) {
+			Logger::error(
+				'Dual publish failed at GitHub step',
+				array(
+					'post_id' => $post_id,
+					'error'   => $github_result->get_error_message(),
+				)
+			);
+			// Don't proceed to Dev.to if GitHub fails (canonical must exist first)
+			return $github_result;
+		}
+
+		Logger::success( 'GitHub sync complete, proceeding to Dev.to syndication', array( 'post_id' => $post_id ) );
+
+		// STEP 2: Syndicate to Dev.to with canonical_url
+		Logger::info( 'Step 2: Syndicating to Dev.to (with canonical_url)', array( 'post_id' => $post_id ) );
+		$devto_result = self::sync_to_devto( $post );
+
+		if ( is_wp_error( $devto_result ) ) {
+			Logger::warning(
+				'Dual publish: GitHub succeeded but Dev.to failed',
+				array(
+					'post_id'      => $post_id,
+					'github'       => 'success',
+					'devto_error'  => $devto_result->get_error_message(),
+				)
+			);
+			// GitHub succeeded, so not a total failure - return partial success
+			return array(
+				'status'       => 'partial',
+				'github'       => $github_result,
+				'devto'        => $devto_result,
+				'message'      => __( 'Published to GitHub successfully, but Dev.to syndication failed.', 'atomic-jamstack-connector' ),
+			);
+		}
+
+		Logger::success(
+			'Dual publish complete: GitHub + Dev.to',
+			array(
+				'post_id'      => $post_id,
+				'github'       => 'success',
+				'devto'        => 'success',
+				'devto_url'    => $devto_result['url'] ?? null,
+			)
+		);
+
+		// Both succeeded
+		return array(
+			'status'  => 'success',
+			'github'  => $github_result,
+			'devto'   => $devto_result,
+			'message' => __( 'Published to GitHub and syndicated to Dev.to successfully.', 'atomic-jamstack-connector' ),
+		);
 	}
 
 	/**
