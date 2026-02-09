@@ -278,12 +278,31 @@ class Settings {
 
 		// Sanitize and encrypt token
 		// CRITICAL: Token must ALWAYS be preserved unless explicitly being updated
+		// CRITICAL: Detect already-encrypted tokens to prevent double-encryption
 		if ( isset( $input['github_token'] ) ) {
 			$token = sanitize_text_field( trim( $input['github_token'] ) );
 			
 			// Only update if not empty and not the masked placeholder
 			if ( ! empty( $token ) && $token !== '••••••••••••••••' ) {
-				$sanitized['github_token'] = self::encrypt_token( $token );
+				// CRITICAL: Check if token is already encrypted
+				// All GitHub tokens start with 'github_pat_' (new format) or 'ghp_' (classic format)
+				// If it doesn't start with these prefixes, it's already encrypted
+				$is_plain_text_token = (
+					str_starts_with( $token, 'github_pat_' ) ||
+					str_starts_with( $token, 'ghp_' )
+				);
+
+				if ( $is_plain_text_token ) {
+					// Plain text token - encrypt it
+					$sanitized['github_token'] = self::encrypt_token( $token );
+				} else {
+					// Token is already encrypted - preserve it without re-encrypting
+					Logger::warning(
+						'Detected already-encrypted GitHub token, preserving without re-encryption',
+						array( 'token_length' => strlen( $token ) )
+					);
+					$sanitized['github_token'] = $token;
+				}
 			} else {
 				// CRITICAL: Explicitly preserve existing token if input is empty or masked
 				if ( ! empty( $existing_settings['github_token'] ) ) {
@@ -1461,6 +1480,9 @@ class Settings {
 	/**
 	 * AJAX handler for Dev.to connection test
 	 *
+	 * CRITICAL: Does NOT use update_option() to avoid triggering sanitize_settings()
+	 * which would double-encrypt the GitHub token.
+	 *
 	 * @return void
 	 */
 	public static function ajax_test_devto_connection(): void {
@@ -1476,20 +1498,24 @@ class Settings {
 			wp_send_json_error( array( 'message' => __( 'API key required', 'atomic-jamstack-connector' ) ) );
 		}
 
-		// Temporarily set API key for test
-		$settings     = get_option( self::OPTION_NAME, array() );
-		$original_key = $settings['devto_api_key'] ?? '';
-		$settings['devto_api_key'] = $api_key;
-		update_option( self::OPTION_NAME, $settings );
-
-		// Test connection
+		// Test connection WITHOUT saving to database
+		// This avoids triggering sanitize_settings() which would double-encrypt GitHub token
 		require_once ATOMIC_JAMSTACK_PATH . 'core/class-devto-api.php';
+		
+		// Temporarily override settings for this request only using a filter
+		add_filter(
+			'option_' . self::OPTION_NAME,
+			function( $value ) use ( $api_key ) {
+				if ( is_array( $value ) ) {
+					$value['devto_api_key'] = $api_key;
+				}
+				return $value;
+			},
+			999
+		);
+
 		$devto_api = new \AtomicJamstack\Core\DevTo_API();
 		$result    = $devto_api->test_connection();
-
-		// Restore original key
-		$settings['devto_api_key'] = $original_key;
-		update_option( self::OPTION_NAME, $settings );
 
 		if ( is_wp_error( $result ) ) {
 			Logger::error( 'Dev.to connection test failed', array( 'error' => $result->get_error_message() ) );

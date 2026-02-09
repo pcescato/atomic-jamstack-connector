@@ -64,7 +64,20 @@ class Git_API {
 
 		// Decrypt token if present
 		if ( ! empty( $settings['github_token'] ) ) {
-			$decrypted = $this->decrypt_token( $settings['github_token'] );
+			$encrypted_token = $settings['github_token'];
+			$decrypted = $this->decrypt_token( $encrypted_token );
+			
+			// Debug logging to diagnose token issues
+			Logger::info(
+				'Token decryption attempt',
+				array(
+					'encrypted_length' => strlen( $encrypted_token ),
+					'decrypted_length' => $decrypted !== false ? strlen( $decrypted ) : 0,
+					'decryption_success' => $decrypted !== false && ! empty( $decrypted ),
+					'encrypted_preview' => substr( $encrypted_token, 0, 20 ) . '...',
+					'decrypted_preview' => $decrypted !== false ? substr( $decrypted, 0, 10 ) . '...' : 'FAILED',
+				)
+			);
 			
 			// If decryption fails, fall back to plain text and log warning
 			if ( false === $decrypted || empty( $decrypted ) ) {
@@ -75,6 +88,10 @@ class Git_API {
 				$this->token = $settings['github_token'];
 			} else {
 				$this->token = $decrypted;
+				Logger::info(
+					'Token decrypted successfully',
+					array( 'decrypted_token_length' => strlen( $this->token ) )
+				);
 			}
 		}
 
