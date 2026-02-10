@@ -181,12 +181,12 @@ class DevTo_Adapter implements Adapter_Interface {
 		}
 
 		// Ensure absolute URL (not relative)
-		if ( ! parse_url( $url, PHP_URL_SCHEME ) ) {
+		if ( ! wp_parse_url( $url, PHP_URL_SCHEME ) ) {
 			$url = home_url( $url );
 		}
 
 		// Validate URL has http/https scheme
-		$scheme = parse_url( $url, PHP_URL_SCHEME );
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
 		if ( ! in_array( $scheme, array( 'http', 'https' ), true ) ) {
 			return null;
 		}
@@ -363,7 +363,7 @@ class DevTo_Adapter implements Adapter_Interface {
 				$url = $matches[2];
 
 				// If URL is relative, make it absolute
-				if ( ! parse_url( $url, PHP_URL_SCHEME ) ) {
+				if ( ! wp_parse_url( $url, PHP_URL_SCHEME ) ) {
 					$url = home_url( $url );
 				}
 

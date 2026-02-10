@@ -399,7 +399,7 @@ class Settings {
 		if ( isset( $input['devto_canonical_url'] ) ) {
 			$url = esc_url_raw( trim( $input['devto_canonical_url'] ) );
 			// Only set if valid URL with scheme, otherwise preserve existing or skip
-			if ( ! empty( $url ) && parse_url( $url, PHP_URL_SCHEME ) ) {
+			if ( ! empty( $url ) && wp_parse_url( $url, PHP_URL_SCHEME ) ) {
 				$sanitized['devto_canonical_url'] = rtrim( $url, '/' ); // Remove trailing slash
 			}
 		}
@@ -918,7 +918,7 @@ class Settings {
 					</a>
 					<a href="?page=jamstack-sync&settings_tab=credentials" 
 					   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-						<?php esc_html_e( 'GitHub Credentials', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Credentials', 'atomic-jamstack-connector' ); ?>
 					</a>
 				</h2>
 			</div>
