@@ -100,11 +100,11 @@ class Headless_Redirect {
 		switch ( $strategy ) {
 			case 'github_only':
 			case 'dual_github_devto':
-				return rtrim( $settings['github_pages_url'] ?? '', '/' );
+				return rtrim( $settings['github_site_url'] ?? '', '/' );
 
 			case 'devto_only':
-				$username = $settings['devto_username'] ?? '';
-				return $username ? 'https://dev.to/' . $username : '';
+				$site_url = $settings['devto_site_url'] ?? '';
+				return rtrim( $site_url, '/' );
 
 			default:
 				return '';
@@ -228,13 +228,13 @@ class Headless_Redirect {
 						printf(
 							/* translators: %s: code tag */
 							esc_html__( 'Please configure your %s in plugin settings.', 'atomic-jamstack-connector' ),
-							'<code>' . esc_html__( 'Dev.to Username', 'atomic-jamstack-connector' ) . '</code>'
+							'<code>' . esc_html__( 'Dev.to Site URL', 'atomic-jamstack-connector' ) . '</code>'
 						);
 					} else {
 						printf(
 							/* translators: %s: code tag */
 							esc_html__( 'Please configure your %s in plugin settings.', 'atomic-jamstack-connector' ),
-							'<code>' . esc_html__( 'GitHub Pages URL', 'atomic-jamstack-connector' ) . '</code>'
+							'<code>' . esc_html__( 'GitHub Site URL', 'atomic-jamstack-connector' ) . '</code>'
 						);
 					}
 					?>

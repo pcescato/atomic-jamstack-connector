@@ -97,7 +97,7 @@ class Sync_Runner {
 				$publish_devto = get_post_meta( $post_id, '_atomic_jamstack_publish_devto', true );
 				
 				if ( '1' === $publish_devto ) {
-					$wordpress_url = $settings['wordpress_site_url'] ?? get_site_url();
+					$wordpress_url = $settings['devto_site_url'] ?? get_site_url();
 					$canonical_url = trailingslashit( $wordpress_url ) . $post->post_name;
 					
 					Logger::info( 'Syndicating to dev.to', array( 'post_id' => $post_id, 'canonical_url' => $canonical_url ) );
@@ -134,7 +134,7 @@ class Sync_Runner {
 				$publish_devto = get_post_meta( $post_id, '_atomic_jamstack_publish_devto', true );
 				
 				if ( '1' === $publish_devto ) {
-					$github_url    = $settings['github_pages_url'] ?? '';
+					$github_url    = $settings['github_site_url'] ?? '';
 					$canonical_url = trailingslashit( $github_url ) . 'posts/' . $post->post_name;
 					
 					Logger::info( 'Syndicating to dev.to', array( 'post_id' => $post_id, 'canonical_url' => $canonical_url ) );
