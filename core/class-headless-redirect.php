@@ -79,12 +79,14 @@ class Headless_Redirect {
 			'Redirecting frontend request (headless mode)',
 			array(
 				'strategy' => $strategy,
-				'from'     => $_SERVER['REQUEST_URI'] ?? '',
+				'from'     => isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '',
 				'to'       => $redirect_url,
 			)
 		);
 
-		wp_safe_redirect( $redirect_url, 301 );
+		// Use wp_redirect() instead of wp_safe_redirect() because we're redirecting to external domains
+		// The redirect URLs come from our own settings, so they are safe
+		wp_redirect( $redirect_url, 301 );
 		exit;
 	}
 
@@ -143,7 +145,8 @@ class Headless_Redirect {
 		}
 
 		// Default: try to preserve current path
-		return $_SERVER['REQUEST_URI'] ?? '/';
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
+		return $request_uri;
 	}
 
 	/**
