@@ -91,27 +91,45 @@ class Post_Meta_Box {
 			</label>
 
 			<?php
-			$devto_article_id = get_post_meta( $post->ID, '_devto_article_id', true );
+			// Show Dev.to article information if exists
+			$devto_article_id = get_post_meta( $post->ID, '_atomic_jamstack_devto_id', true );
 			if ( $devto_article_id ) :
-				$devto_article_url = get_post_meta( $post->ID, '_devto_article_url', true );
+				$devto_article_url = get_post_meta( $post->ID, '_atomic_jamstack_devto_url', true );
+				$devto_sync_time   = get_post_meta( $post->ID, '_atomic_jamstack_devto_sync_time', true );
 				?>
-				<p class="description" style="margin: 5px 0;">
-					<?php
-					if ( $devto_article_url ) {
-						printf(
-							/* translators: %s: dev.to article URL */
-							wp_kses_post( __( 'Published on <a href="%s" target="_blank">dev.to</a>', 'atomic-jamstack-connector' ) ),
-							esc_url( $devto_article_url )
-						);
-					} else {
+				<div style="margin: 10px 0; padding: 10px; background: #f0f0f1; border-radius: 4px;">
+					<p style="margin: 0 0 5px 0;">
+						<strong><?php esc_html_e( 'Dev.to Article:', 'atomic-jamstack-connector' ); ?></strong>
+					</p>
+					<p style="margin: 0 0 5px 0;">
+						<?php
 						printf(
 							/* translators: %s: dev.to article ID */
-							esc_html__( 'Published on dev.to (ID: %s)', 'atomic-jamstack-connector' ),
-							esc_html( $devto_article_id )
+							esc_html__( 'ID: %s', 'atomic-jamstack-connector' ),
+							'<code>' . esc_html( $devto_article_id ) . '</code>'
 						);
-					}
-					?>
-				</p>
+						?>
+					</p>
+					<?php if ( $devto_article_url ) : ?>
+						<p style="margin: 0 0 5px 0;">
+							<a href="<?php echo esc_url( $devto_article_url ); ?>" target="_blank" rel="noopener">
+								<?php esc_html_e( 'View on dev.to', 'atomic-jamstack-connector' ); ?>
+								<span class="dashicons dashicons-external" style="font-size: 14px; width: 14px; height: 14px;"></span>
+							</a>
+						</p>
+					<?php endif; ?>
+					<?php if ( $devto_sync_time ) : ?>
+						<p style="margin: 0; color: #666; font-size: 12px;">
+							<?php
+							printf(
+								/* translators: %s: human-readable time difference */
+								esc_html__( 'Last synced: %s ago', 'atomic-jamstack-connector' ),
+								esc_html( human_time_diff( (int) $devto_sync_time, time() ) )
+							);
+							?>
+						</p>
+					<?php endif; ?>
+				</div>
 			<?php endif; ?>
 
 			<hr style="margin: 15px 0;">

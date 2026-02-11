@@ -142,6 +142,73 @@ class DevTo_API {
 	}
 
 	/**
+	 * Create new article on Dev.to
+	 *
+	 * @param string $markdown Complete markdown content with front matter.
+	 *
+	 * @return array|\WP_Error Article data with 'id' on success, WP_Error on failure.
+	 */
+	public function create_article( string $markdown ): array|\WP_Error {
+		Logger::info( 'Creating new Dev.to article', array() );
+		
+		$result = $this->publish_article( $markdown, null );
+		
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		
+		// Ensure 'id' is present in response
+		if ( ! isset( $result['id'] ) ) {
+			Logger::error( 'Dev.to API response missing article ID', array( 'response' => $result ) );
+			return new \WP_Error(
+				'missing_id',
+				__( 'Dev.to API response missing article ID', 'atomic-jamstack-connector' )
+			);
+		}
+		
+		Logger::success(
+			'Dev.to article created',
+			array(
+				'article_id' => $result['id'],
+				'url'        => $result['url'] ?? '',
+			)
+		);
+		
+		return $result;
+	}
+
+	/**
+	 * Update existing article on Dev.to
+	 *
+	 * @param int    $article_id Dev.to article ID.
+	 * @param string $markdown   Complete markdown content with front matter.
+	 *
+	 * @return array|\WP_Error Article data on success, WP_Error on failure.
+	 */
+	public function update_article( int $article_id, string $markdown ): array|\WP_Error {
+		Logger::info(
+			'Updating Dev.to article',
+			array( 'article_id' => $article_id )
+		);
+		
+		$result = $this->publish_article( $markdown, $article_id );
+		
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+		
+		Logger::success(
+			'Dev.to article updated',
+			array(
+				'article_id' => $article_id,
+				'url'        => $result['url'] ?? '',
+			)
+		);
+		
+		return $result;
+	}
+
+	/**
 	 * Test API connection
 	 *
 	 * Verifies API key by fetching user's published articles.

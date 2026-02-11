@@ -301,27 +301,39 @@ class Sync_Runner {
 			require_once ATOMIC_JAMSTACK_PATH . 'core/class-devto-api.php';
 			$devto_api = new DevTo_API();
 
-			// Check if article already published (get stored article ID)
-			$article_id = get_post_meta( $post_id, '_devto_article_id', true );
-			$article_id = $article_id ? (int) $article_id : null;
+			// Check if article already exists on Dev.to
+			$existing_article_id = get_post_meta( $post_id, '_atomic_jamstack_devto_id', true );
+			$existing_article_id = $existing_article_id ? (int) $existing_article_id : null;
 
-			// Publish or update
-			$result = $devto_api->publish_article( $markdown, $article_id );
+			// Create or update article
+			if ( $existing_article_id ) {
+				// Update existing article
+				Logger::info( 'Updating existing Dev.to article', array( 'article_id' => $existing_article_id ) );
+				$result = $devto_api->update_article( $existing_article_id, $markdown );
+			} else {
+				// Create new article
+				Logger::info( 'Creating new Dev.to article', array( 'post_id' => $post_id ) );
+				$result = $devto_api->create_article( $markdown );
+			}
 
 			if ( is_wp_error( $result ) ) {
 				$sync_error = $result;
 				throw new \Exception( $result->get_error_message() );
 			}
 
-			// Store article ID for future updates
-			if ( isset( $result['id'] ) ) {
-				update_post_meta( $post_id, '_devto_article_id', $result['id'] );
+			// Store article ID for future updates (if creating new article)
+			if ( isset( $result['id'] ) && ! $existing_article_id ) {
+				update_post_meta( $post_id, '_atomic_jamstack_devto_id', $result['id'] );
+				Logger::info( 'Saved Dev.to article ID', array( 'post_id' => $post_id, 'article_id' => $result['id'] ) );
 			}
 
 			// Store article URL if available
 			if ( isset( $result['url'] ) ) {
-				update_post_meta( $post_id, '_devto_article_url', $result['url'] );
+				update_post_meta( $post_id, '_atomic_jamstack_devto_url', $result['url'] );
 			}
+
+			// Store last sync timestamp
+			update_post_meta( $post_id, '_atomic_jamstack_devto_sync_time', time() );
 
 			$sync_result = $result;
 
@@ -329,8 +341,9 @@ class Sync_Runner {
 				'Dev.to sync complete',
 				array(
 					'post_id'    => $post_id,
-					'article_id' => $result['id'] ?? null,
+					'article_id' => $result['id'] ?? $existing_article_id,
 					'url'        => $result['url'] ?? null,
+					'action'     => $existing_article_id ? 'updated' : 'created',
 				)
 			);
 
