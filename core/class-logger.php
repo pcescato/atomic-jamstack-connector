@@ -96,7 +96,7 @@ class Logger {
 			return;
 		}
 		
-		$log_dir = $upload_dir['basedir'] . '/atomic-jamstack-logs';
+		$log_dir = $upload_dir['basedir'] . '/ajc-bridge-logs';
 
 		// Create log directory if it doesn't exist
 		if ( ! file_exists( $log_dir ) ) {
@@ -122,7 +122,7 @@ class Logger {
 			}
 		}
 
-		$log_file = $log_dir . '/atomic-jamstack-' . gmdate( 'Y-m-d' ) . '.log';
+		$log_file = $log_dir . '/ajc-bridge-' . gmdate( 'Y-m-d' ) . '.log';
 
 		// Append to log file with error handling
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
@@ -223,8 +223,8 @@ class Logger {
 			return false;
 		}
 		
-		$log_dir = $upload_dir['basedir'] . '/atomic-jamstack-logs';
-		$log_file = $log_dir . '/atomic-jamstack-' . gmdate( 'Y-m-d' ) . '.log';
+		$log_dir = $upload_dir['basedir'] . '/ajc-bridge-logs';
+		$log_file = $log_dir . '/ajc-bridge-' . gmdate( 'Y-m-d' ) . '.log';
 		
 		return $log_file;
 	}
@@ -241,6 +241,6 @@ class Logger {
 			return false;
 		}
 		
-		return $upload_dir['basedir'] . '/atomic-jamstack-logs';
+		return $upload_dir['basedir'] . '/ajc-bridge-logs';
 	}
 }

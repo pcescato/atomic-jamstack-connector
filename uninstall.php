@@ -131,6 +131,6 @@ wp_cache_delete( 'ajc_bridge_settings', 'options' );
  * - File deletion could fail due to permissions
  * - WordPress doesn't guarantee file system access in uninstall
  * 
- * Users can manually delete: wp-content/uploads/atomic-jamstack-logs/
+ * Users can manually delete: wp-content/uploads/ajc-bridge-logs/
  * if they want to remove log files.
  */

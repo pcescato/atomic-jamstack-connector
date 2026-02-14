@@ -661,7 +661,7 @@ class Settings {
 		</label>
 		<p class="description">
 			<?php
-			esc_html_e( 'Logs will be written to wp-content/uploads/atomic-jamstack-logs/', 'ajc-bridge' );
+			esc_html_e( 'Logs will be written to wp-content/uploads/ajc-bridge-logs/', 'ajc-bridge' );
 			
 			// Show log file path if debug is enabled
 			if ( $checked ) {
