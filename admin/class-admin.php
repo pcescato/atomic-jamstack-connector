@@ -41,10 +41,10 @@ class Admin {
 	public static function add_menu_pages(): void {
 		// Main top-level menu - Visible to authors and above
 		add_menu_page(
-			__( 'Jamstack Sync', 'ajc-bridge' ),
-			__( 'Jamstack Sync', 'ajc-bridge' ),
+			__( 'AJC Bridge', 'ajc-bridge' ),
+			__( 'AJC Bridge', 'ajc-bridge' ),
 			'publish_posts',
-			'jamstack-sync',
+			'ajc-bridge',
 			array( Settings::class, 'render_settings_page' ),
 			'dashicons-cloud-upload',
 			26
@@ -52,31 +52,31 @@ class Admin {
 
 		// Submenu 1: Settings (default) - Admin only
 		add_submenu_page(
-			'jamstack-sync',
+			'ajc-bridge',
 			__( 'Settings', 'ajc-bridge' ),
 			__( 'Settings', 'ajc-bridge' ),
 			'manage_options',
-			'jamstack-sync',
+			'ajc-bridge',
 			array( Settings::class, 'render_settings_page' )
 		);
 
 		// Submenu 2: Bulk Operations - Admin only
 		add_submenu_page(
-			'jamstack-sync',
+			'ajc-bridge',
 			__( 'Bulk Operations', 'ajc-bridge' ),
 			__( 'Bulk Operations', 'ajc-bridge' ),
 			'manage_options',
-			'jamstack-sync-bulk',
+			'ajc-bridge-bulk',
 			array( Settings::class, 'render_bulk_page' )
 		);
 
 		// Submenu 3: Sync History - Authors and above
 		add_submenu_page(
-			'jamstack-sync',
+			'ajc-bridge',
 			__( 'Sync History', 'ajc-bridge' ),
 			__( 'Sync History', 'ajc-bridge' ),
 			'publish_posts',
-			'jamstack-sync-history',
+			'ajc-bridge-history',
 			array( Settings::class, 'render_history_page' )
 		);
 	}

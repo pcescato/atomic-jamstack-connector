@@ -61,8 +61,14 @@ class Settings {
 	 * @return void
 	 */
 	public static function enqueue_admin_assets( string $hook ): void {
-		// Only load on our settings page
-		if ( 'settings_page_ajc-bridge-settings' !== $hook ) {
+		// Load on all our plugin pages
+		$allowed_hooks = array(
+			'toplevel_page_ajc-bridge',
+			'ajc-bridge_page_ajc-bridge-bulk',
+			'ajc-bridge_page_ajc-bridge-history',
+		);
+		
+		if ( ! in_array( $hook, $allowed_hooks, true ) ) {
 			return;
 		}
 
@@ -999,11 +1005,11 @@ class Settings {
 			<!-- Settings Sub-Tab Navigation -->
 			<div class="atomic-jamstack-subtabs">
 				<h2 class="nav-tab-wrapper">
-					<a href="?page=jamstack-sync&settings_tab=general" 
+					<a href="?page=ajc-bridge&settings_tab=general" 
 					   class="nav-tab <?php echo 'general' === $settings_tab ? 'nav-tab-active' : ''; ?>">
 						<?php esc_html_e( 'General', 'ajc-bridge' ); ?>
 					</a>
-					<a href="?page=jamstack-sync&settings_tab=credentials" 
+					<a href="?page=ajc-bridge&settings_tab=credentials" 
 					   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
 						<?php esc_html_e( 'Credentials', 'ajc-bridge' ); ?>
 					</a>

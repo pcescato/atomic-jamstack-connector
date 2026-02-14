@@ -163,7 +163,7 @@ class Headless_Redirect {
 	private static function show_headless_notice( string $strategy ): void {
 		status_header( 200 );
 
-		$admin_url = admin_url( 'admin.php?page=atomic-jamstack-settings' );
+		$admin_url = admin_url( 'admin.php?page=ajc-bridge' );
 
 		?>
 		<!DOCTYPE html>
