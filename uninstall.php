@@ -15,7 +15,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 // Load plugin settings to check if data deletion is enabled
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
-$jamstack_settings = get_option( 'atomic_jamstack_settings', array() );
+$jamstack_settings = get_option( 'ajc_bridge_settings', array() );
 
 // Only proceed with cleanup if user explicitly enabled data deletion
 if ( empty( $jamstack_settings['delete_data_on_uninstall'] ) ) {
@@ -39,28 +39,28 @@ if ( empty( $jamstack_settings['delete_data_on_uninstall'] ) ) {
  */
 
 // 1. Delete plugin options using native WordPress API
-delete_option( 'atomic_jamstack_settings' );
-delete_option( 'atomic_jamstack_logs' );  // Logger stores last 100 log entries here
+delete_option( 'ajc_bridge_settings' );
+delete_option( 'ajc_bridge_logs' );  // Logger stores last 100 log entries here
 
 // 2. Delete all post meta using native WordPress API
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 $jamstack_post_meta_keys = array(
 	// Original keys (keep these)
-	'_jamstack_sync_status',        // Sync status (pending, processing, success, failed)
-	'_jamstack_sync_last',          // Last sync timestamp
-	'_jamstack_file_path',          // GitHub file path for the post
-	'_jamstack_last_commit_url',    // GitHub commit URL
-	'_jamstack_sync_start_time',    // Sync start time for timeout detection
+	'_ajc_sync_status',        // Sync status (pending, processing, success, failed)
+	'_ajc_sync_last',          // Last sync timestamp
+	'_ajc_file_path',          // GitHub file path for the post
+	'_ajc_last_commit_url',    // GitHub commit URL
+	'_ajc_sync_start_time',    // Sync start time for timeout detection
 
 	// Queue Manager meta keys (added to fix incomplete cleanup)
-	'_jamstack_sync_timestamp',     // Queue_Manager::META_TIMESTAMP
-	'_jamstack_retry_count',        // Queue_Manager::META_RETRY_COUNT
+	'_ajc_sync_timestamp',     // Queue_Manager::META_TIMESTAMP
+	'_ajc_retry_count',        // Queue_Manager::META_RETRY_COUNT
 
 	// Dev.to adapter meta keys (added to fix incomplete cleanup)
-	'_atomic_jamstack_publish_devto', // Post meta box checkbox state
-	'_atomic_jamstack_devto_id',      // Dev.to article ID
-	'_atomic_jamstack_devto_url',     // Dev.to article URL
-	'_atomic_jamstack_devto_sync_time', // Dev.to last sync timestamp
+	'_ajc_bridge_publish_devto', // Post meta box checkbox state
+	'_ajc_bridge_devto_id',      // Dev.to article ID
+	'_ajc_bridge_devto_url',     // Dev.to article URL
+	'_ajc_bridge_devto_sync_time', // Dev.to last sync timestamp
 );
 
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
@@ -82,8 +82,8 @@ $wpdb->query(
 		"DELETE FROM {$wpdb->options} 
 		WHERE option_name LIKE %s 
 		OR option_name LIKE %s",
-		$wpdb->esc_like( '_transient_jamstack_lock_' ) . '%',
-		$wpdb->esc_like( '_transient_timeout_jamstack_lock_' ) . '%'
+		$wpdb->esc_like( '_transient_ajc_lock_' ) . '%',
+		$wpdb->esc_like( '_transient_timeout_ajc_lock_' ) . '%'
 	)
 );
 // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -98,8 +98,8 @@ if ( class_exists( 'ActionScheduler_DBStore' ) ) {
 	// Get all pending/in-progress actions for our plugin
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 	$jamstack_action_groups = array(
-		'atomic_jamstack_sync',
-		'atomic_jamstack_deletion',
+		'ajc_bridge_sync',
+		'ajc_bridge_deletion',
 	);
 	
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
@@ -122,7 +122,7 @@ if ( class_exists( 'ActionScheduler_DBStore' ) ) {
 }
 
 // 5. Optional: Clear any cached data
-wp_cache_delete( 'atomic_jamstack_settings', 'options' );
+wp_cache_delete( 'ajc_bridge_settings', 'options' );
 
 /**
  * Note: We do NOT delete log files from the file system

@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -40,7 +40,7 @@ class DevTo_API {
 	 * Loads API key from plugin settings.
 	 */
 	public function __construct() {
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$this->api_key = $settings['devto_api_key'] ?? '';
 	}
 
@@ -58,7 +58,7 @@ class DevTo_API {
 		if ( empty( $this->api_key ) ) {
 			return new \WP_Error(
 				'missing_api_key',
-				__( 'Dev.to API key is not configured.', 'atomic-jamstack-connector' )
+				__( 'Dev.to API key is not configured.', 'ajc-bridge' )
 			);
 		}
 
@@ -131,7 +131,7 @@ class DevTo_API {
 				'api_error',
 				sprintf(
 					/* translators: %1$s: HTTP code, %2$s: Error message */
-					__( 'Dev.to API error (HTTP %1$s): %2$s', 'atomic-jamstack-connector' ),
+					__( 'Dev.to API error (HTTP %1$s): %2$s', 'ajc-bridge' ),
 					$http_code,
 					$error_message
 				)
@@ -162,7 +162,7 @@ class DevTo_API {
 			Logger::error( 'Dev.to API response missing article ID', array( 'response' => $result ) );
 			return new \WP_Error(
 				'missing_id',
-				__( 'Dev.to API response missing article ID', 'atomic-jamstack-connector' )
+				__( 'Dev.to API response missing article ID', 'ajc-bridge' )
 			);
 		}
 		
@@ -219,7 +219,7 @@ class DevTo_API {
 		if ( empty( $this->api_key ) ) {
 			return new \WP_Error(
 				'missing_api_key',
-				__( 'Dev.to API key is required.', 'atomic-jamstack-connector' )
+				__( 'Dev.to API key is required.', 'ajc-bridge' )
 			);
 		}
 
@@ -264,7 +264,7 @@ class DevTo_API {
 				'connection_failed',
 				sprintf(
 					/* translators: %1$s: HTTP code, %2$s: Error message */
-					__( 'Connection failed (HTTP %1$s): %2$s', 'atomic-jamstack-connector' ),
+					__( 'Connection failed (HTTP %1$s): %2$s', 'ajc-bridge' ),
 					$http_code,
 					$error_message
 				)
@@ -334,7 +334,7 @@ class DevTo_API {
 		if ( empty( $this->api_key ) ) {
 			return new \WP_Error(
 				'missing_api_key',
-				__( 'Dev.to API key is required.', 'atomic-jamstack-connector' )
+				__( 'Dev.to API key is required.', 'ajc-bridge' )
 			);
 		}
 
@@ -371,7 +371,7 @@ class DevTo_API {
 				'api_error',
 				sprintf(
 					/* translators: %1$s: HTTP code, %2$s: Error message */
-					__( 'Failed to fetch articles (HTTP %1$s): %2$s', 'atomic-jamstack-connector' ),
+					__( 'Failed to fetch articles (HTTP %1$s): %2$s', 'ajc-bridge' ),
 					$http_code,
 					$error_message
 				)

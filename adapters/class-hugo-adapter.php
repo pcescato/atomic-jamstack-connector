@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Adapters;
+namespace AjcBridge\Adapters;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -49,7 +49,7 @@ class Hugo_Adapter implements Adapter_Interface {
 	 */
 	private function build_front_matter_from_template( \WP_Post $post, string $featured_image_path = '' ): string {
 		// Get template from settings
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		
 		// Default YAML template
 		$default_template = "---\ntitle: \"{{title}}\"\ndate: {{date}}\nauthor: \"{{author}}\"\ncover:\n  image: \"{{image_avif}}\"\n  alt: \"{{title}}\"\n---";

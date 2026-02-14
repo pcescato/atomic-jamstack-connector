@@ -1,0 +1,21 @@
+/**
+ * AJC Bridge - Settings Page Styles
+ * 
+ * Styles for the plugin settings page including bulk sync controls
+ * and sync history monitor.
+ * 
+ * @package AjcBridge
+ */
+
+.dashicons.spin {
+	animation: ajc-spin 1s linear infinite;
+}
+
+.dashicons-spin {
+	animation: ajc-spin 1s linear infinite;
+}
+
+@keyframes ajc-spin {
+	0% { transform: rotate(0deg); }
+	100% { transform: rotate(360deg); }
+}

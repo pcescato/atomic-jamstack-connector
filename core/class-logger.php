@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -76,7 +76,7 @@ class Logger {
 	 * @return bool True if debug logging is enabled.
 	 */
 	private static function is_debug_enabled(): bool {
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		return ! empty( $settings['debug_mode'] );
 	}
 
@@ -145,7 +145,7 @@ class Logger {
 	 * @return void
 	 */
 	private static function store_in_database( string $level, string $message, array $context ): void {
-		$logs = get_option( 'atomic_jamstack_logs', array() );
+		$logs = get_option( 'ajc_bridge_logs', array() );
 
 		// Add new entry
 		$logs[] = array(
@@ -160,7 +160,7 @@ class Logger {
 			$logs = array_slice( $logs, -100 );
 		}
 
-		update_option( 'atomic_jamstack_logs', $logs, false );
+		update_option( 'ajc_bridge_logs', $logs, false );
 	}
 
 	/**

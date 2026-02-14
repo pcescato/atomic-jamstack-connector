@@ -1,8 +1,8 @@
 {
-	"name": "wpjamstack/wp-jamstack-sync",
-	"description": "Automated WordPress to Hugo publishing system with async GitHub API integration",
+	"name": "ajc-bridge/ajc-bridge",
+	"description": "Flexible WordPress publishing with 5 strategies: WordPress-only, WordPress+dev.to syndication, GitHub headless, dev.to headless, or dual GitHub+dev.to",
 	"type": "wordpress-plugin",
-	"license": "GPL-2.0-or-later",
+	"license": "GPL-3.0-or-later",
 	"authors": [
 		{
 			"name": "Pascal CESCATO",
@@ -12,12 +12,14 @@
 	"require": {
 		"php": ">=8.1",
 		"woocommerce/action-scheduler": "^3.7",
-		"intervention/image": "^2.7",
+		"intervention/image": "^3.11",
 		"league/html-to-markdown": "^5.1"
 	},
 	"autoload": {
 		"psr-4": {
-			"WPJamstack\\": ""
+			"AjcBridge\\": "core/",
+			"AjcBridge\\Adapters\\": "adapters/",
+			"AjcBridge\\Admin\\": "admin/"
 		}
 	},
 	"config": {

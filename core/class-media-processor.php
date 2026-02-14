@@ -7,9 +7,11 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -56,7 +58,8 @@ class Media_Processor {
 			$driver = $this->detect_optimal_driver();
 			
 			try {
-				$this->image_manager = new ImageManager( array( 'driver' => $driver ) );
+				$driver_instance = $driver === 'imagick' ? new ImagickDriver() : new GdDriver();
+				$this->image_manager = new ImageManager( $driver_instance );
 				
 				Logger::info(
 					'Media Processor initialized',
@@ -68,7 +71,7 @@ class Media_Processor {
 				);
 			} catch ( \Exception $e ) {
 				// Fallback to GD if Imagick initialization fails
-				$this->image_manager = new ImageManager( array( 'driver' => 'gd' ) );
+				$this->image_manager = new ImageManager( new GdDriver() );
 				
 				Logger::warning(
 					'Imagick driver failed, falling back to GD',
@@ -805,7 +808,7 @@ class Media_Processor {
 		try {
 			$output_path = $this->temp_dir . '/' . $post_id . '/' . $basename . '.webp';
 
-			$image = $this->image_manager->make( $source_path );
+			$image = $this->image_manager->read( $source_path );
 			$image->encode( 'webp', 85 ); // 85% quality
 			$image->save( $output_path );
 
@@ -846,7 +849,7 @@ class Media_Processor {
 		try {
 			$output_path = $this->temp_dir . '/' . $post_id . '/featured.webp';
 
-			$image = $this->image_manager->make( $source_path );
+			$image = $this->image_manager->read( $source_path );
 			$image->encode( 'webp', 85 ); // 85% quality
 			$image->save( $output_path );
 
@@ -896,8 +899,8 @@ class Media_Processor {
 		try {
 			$output_path = $this->temp_dir . '/' . $post_id . '/featured.avif';
 
-			$image   = $this->image_manager->make( $source_path );
-			$imagick = $image->getCore();
+			$image   = $this->image_manager->read( $source_path );
+			$imagick = $image->core();
 
 			if ( $imagick instanceof \Imagick ) {
 				$imagick->setImageFormat( 'avif' );
@@ -965,11 +968,11 @@ class Media_Processor {
 		try {
 			$output_path = $this->temp_dir . '/' . $post_id . '/' . $basename . '.avif';
 
-			$image = $this->image_manager->make( $source_path );
+			$image = $this->image_manager->read( $source_path );
 			
 			// AVIF encoding with quality 85
 			// Note: Intervention/Image may not support AVIF directly, so we use Imagick directly
-			$imagick = $image->getCore();
+			$imagick = $image->core();
 			
 			if ( $imagick instanceof \Imagick ) {
 				$imagick->setImageFormat( 'avif' );

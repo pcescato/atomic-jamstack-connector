@@ -1,0 +1,57 @@
+/**
+ * AJC Bridge - Admin Columns Styles
+ * 
+ * Styles for the sync status column in the posts list table.
+ * 
+ * @package AjcBridge
+ */
+
+.jamstack-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-weight: 500;
+}
+
+.jamstack-status .dashicons {
+	font-size: 18px;
+	width: 18px;
+	height: 18px;
+}
+
+.jamstack-status-pending .dashicons {
+	color: #f0b849;
+}
+
+.jamstack-status-processing .dashicons {
+	color: #0073aa;
+}
+
+.jamstack-status-success .dashicons {
+	color: #46b450;
+}
+
+.jamstack-status-error .dashicons {
+	color: #dc3232;
+}
+
+.jamstack-status-cancelled .dashicons {
+	color: #82878c;
+}
+
+.jamstack-status-unknown .dashicons {
+	color: #dcdcde;
+}
+
+.jamstack-timestamp {
+	color: #646970;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.jamstack-status .spin {
+	animation: spin 1s linear infinite;
+}

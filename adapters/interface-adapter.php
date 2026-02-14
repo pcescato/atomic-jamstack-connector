@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Adapters;
+namespace AjcBridge\Adapters;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );

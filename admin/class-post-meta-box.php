@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Admin;
+namespace AjcBridge\Admin;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -34,7 +34,7 @@ class Post_Meta_Box {
 	 * @return void
 	 */
 	public static function add_meta_box(): void {
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$strategy = $settings['publishing_strategy'] ?? 'wordpress_only';
 
 		// Only show meta box in modes where dev.to is optional per-post
@@ -43,8 +43,8 @@ class Post_Meta_Box {
 		}
 
 		add_meta_box(
-			'atomic_jamstack_sync_control',
-			__( 'Jamstack Publishing', 'atomic-jamstack-connector' ),
+			'ajc_bridge_sync_control',
+			__( 'Jamstack Publishing', 'ajc-bridge' ),
 			array( __CLASS__, 'render_meta_box' ),
 			'post',
 			'side',
@@ -60,52 +60,52 @@ class Post_Meta_Box {
 	 * @return void
 	 */
 	public static function render_meta_box( \WP_Post $post ): void {
-		wp_nonce_field( 'atomic_jamstack_meta_box', 'atomic_jamstack_meta_box_nonce' );
+		wp_nonce_field( 'ajc_bridge_meta_box', 'ajc_bridge_meta_box_nonce' );
 
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$strategy = $settings['publishing_strategy'] ?? 'wordpress_only';
 		
-		$publish_to_devto = get_post_meta( $post->ID, '_atomic_jamstack_publish_devto', true );
+		$publish_to_devto = get_post_meta( $post->ID, '_ajc_bridge_publish_devto', true );
 		$checked          = ( '1' === $publish_to_devto || 1 === $publish_to_devto );
 
 		?>
 		<div class="atomic-jamstack-meta-box">
 			<?php if ( 'wordpress_devto' === $strategy ) : ?>
 				<p class="description">
-					<?php esc_html_e( 'WordPress is your canonical site. Optionally syndicate to dev.to.', 'atomic-jamstack-connector' ); ?>
+					<?php esc_html_e( 'WordPress is your canonical site. Optionally syndicate to dev.to.', 'ajc-bridge' ); ?>
 				</p>
 			<?php elseif ( 'dual_github_devto' === $strategy ) : ?>
 				<p class="description">
-					<?php esc_html_e( 'Post syncs to GitHub automatically. Optionally syndicate to dev.to.', 'atomic-jamstack-connector' ); ?>
+					<?php esc_html_e( 'Post syncs to GitHub automatically. Optionally syndicate to dev.to.', 'ajc-bridge' ); ?>
 				</p>
 			<?php endif; ?>
 
 			<label style="display: block; margin: 10px 0;">
 				<input 
 					type="checkbox" 
-					name="atomic_jamstack_publish_devto" 
+					name="ajc_bridge_publish_devto" 
 					value="1" 
 					<?php checked( $checked ); ?>
 				/>
-				<strong><?php esc_html_e( 'Publish to dev.to', 'atomic-jamstack-connector' ); ?></strong>
+				<strong><?php esc_html_e( 'Publish to dev.to', 'ajc-bridge' ); ?></strong>
 			</label>
 
 			<?php
 			// Show Dev.to article information if exists
-			$devto_article_id = get_post_meta( $post->ID, '_atomic_jamstack_devto_id', true );
+			$devto_article_id = get_post_meta( $post->ID, '_ajc_bridge_devto_id', true );
 			if ( $devto_article_id ) :
-				$devto_article_url = get_post_meta( $post->ID, '_atomic_jamstack_devto_url', true );
-				$devto_sync_time   = get_post_meta( $post->ID, '_atomic_jamstack_devto_sync_time', true );
+				$devto_article_url = get_post_meta( $post->ID, '_ajc_bridge_devto_url', true );
+				$devto_sync_time   = get_post_meta( $post->ID, '_ajc_bridge_devto_sync_time', true );
 				?>
 				<div style="margin: 10px 0; padding: 10px; background: #f0f0f1; border-radius: 4px;">
 					<p style="margin: 0 0 5px 0;">
-						<strong><?php esc_html_e( 'Dev.to Article:', 'atomic-jamstack-connector' ); ?></strong>
+						<strong><?php esc_html_e( 'Dev.to Article:', 'ajc-bridge' ); ?></strong>
 					</p>
 					<p style="margin: 0 0 5px 0;">
 						<?php
 						printf(
 							/* translators: %s: dev.to article ID */
-							esc_html__( 'ID: %s', 'atomic-jamstack-connector' ),
+							esc_html__( 'ID: %s', 'ajc-bridge' ),
 							'<code>' . esc_html( $devto_article_id ) . '</code>'
 						);
 						?>
@@ -113,7 +113,7 @@ class Post_Meta_Box {
 					<?php if ( $devto_article_url ) : ?>
 						<p style="margin: 0 0 5px 0;">
 							<a href="<?php echo esc_url( $devto_article_url ); ?>" target="_blank" rel="noopener">
-								<?php esc_html_e( 'View on dev.to', 'atomic-jamstack-connector' ); ?>
+								<?php esc_html_e( 'View on dev.to', 'ajc-bridge' ); ?>
 								<span class="dashicons dashicons-external" style="font-size: 14px; width: 14px; height: 14px;"></span>
 							</a>
 						</p>
@@ -123,7 +123,7 @@ class Post_Meta_Box {
 							<?php
 							printf(
 								/* translators: %s: human-readable time difference */
-								esc_html__( 'Last synced: %s ago', 'atomic-jamstack-connector' ),
+								esc_html__( 'Last synced: %s ago', 'ajc-bridge' ),
 								esc_html( human_time_diff( (int) $devto_sync_time, time() ) )
 							);
 							?>
@@ -135,24 +135,24 @@ class Post_Meta_Box {
 			<hr style="margin: 15px 0;">
 
 			<?php
-			$sync_status = get_post_meta( $post->ID, '_jamstack_sync_status', true );
-			$sync_last   = get_post_meta( $post->ID, '_jamstack_sync_last', true );
+			$sync_status = get_post_meta( $post->ID, '_ajc_sync_status', true );
+			$sync_last   = get_post_meta( $post->ID, '_ajc_sync_last', true );
 
 			if ( $sync_status ) :
 				?>
 				<p style="margin: 10px 0;">
-					<strong><?php esc_html_e( 'Last Sync:', 'atomic-jamstack-connector' ); ?></strong><br>
+					<strong><?php esc_html_e( 'Last Sync:', 'ajc-bridge' ); ?></strong><br>
 					<?php
 					if ( 'success' === $sync_status ) {
-						echo '<span style="color: green;">✓ ' . esc_html__( 'Success', 'atomic-jamstack-connector' ) . '</span>';
+						echo '<span style="color: green;">✓ ' . esc_html__( 'Success', 'ajc-bridge' ) . '</span>';
 					} elseif ( 'error' === $sync_status || 'failed' === $sync_status ) {
-						echo '<span style="color: red;">✗ ' . esc_html__( 'Failed', 'atomic-jamstack-connector' ) . '</span>';
+						echo '<span style="color: red;">✗ ' . esc_html__( 'Failed', 'ajc-bridge' ) . '</span>';
 					} else {
 						echo '<span style="color: gray;">' . esc_html( ucfirst( $sync_status ) ) . '</span>';
 					}
 
 					if ( $sync_last ) {
-						echo '<br><small>' . esc_html( human_time_diff( (int) $sync_last, time() ) ) . ' ' . esc_html__( 'ago', 'atomic-jamstack-connector' ) . '</small>';
+						echo '<br><small>' . esc_html( human_time_diff( (int) $sync_last, time() ) ) . ' ' . esc_html__( 'ago', 'ajc-bridge' ) . '</small>';
 					}
 					?>
 				</p>
@@ -187,12 +187,12 @@ class Post_Meta_Box {
 	 */
 	public static function save_meta_box( int $post_id, \WP_Post $post ): void {
 		// Security checks
-		if ( ! isset( $_POST['atomic_jamstack_meta_box_nonce'] ) ) {
+		if ( ! isset( $_POST['ajc_bridge_meta_box_nonce'] ) ) {
 			return;
 		}
 
-		$nonce = sanitize_text_field( wp_unslash( $_POST['atomic_jamstack_meta_box_nonce'] ) );
-		if ( ! wp_verify_nonce( $nonce, 'atomic_jamstack_meta_box' ) ) {
+		$nonce = sanitize_text_field( wp_unslash( $_POST['ajc_bridge_meta_box_nonce'] ) );
+		if ( ! wp_verify_nonce( $nonce, 'ajc_bridge_meta_box' ) ) {
 			return;
 		}
 
@@ -205,7 +205,7 @@ class Post_Meta_Box {
 		}
 
 		// Save checkbox value
-		$publish_to_devto = isset( $_POST['atomic_jamstack_publish_devto'] ) ? '1' : '0';
-		update_post_meta( $post_id, '_atomic_jamstack_publish_devto', $publish_to_devto );
+		$publish_to_devto = isset( $_POST['ajc_bridge_publish_devto'] ) ? '1' : '0';
+		update_post_meta( $post_id, '_ajc_bridge_publish_devto', $publish_to_devto );
 	}
 }

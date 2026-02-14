@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -43,7 +43,7 @@ class Sync_Runner {
 		Logger::info( 'Sync runner started', array( 'post_id' => $post_id ) );
 
 		// Record sync start time for safety timeout
-		update_post_meta( $post_id, '_jamstack_sync_start_time', time() );
+		update_post_meta( $post_id, '_ajc_sync_start_time', time() );
 
 		// Check for safety timeout (5 minutes)
 		self::check_safety_timeout( $post_id );
@@ -53,18 +53,18 @@ class Sync_Runner {
 		if ( ! $post ) {
 			Logger::error( 'Post not found', array( 'post_id' => $post_id ) );
 			self::update_sync_meta( $post_id, 'failed' );
-			return new \WP_Error( 'post_not_found', __( 'Post not found', 'atomic-jamstack-connector' ) );
+			return new \WP_Error( 'post_not_found', __( 'Post not found', 'ajc-bridge' ) );
 		}
 
 		// Only sync published posts
 		if ( 'publish' !== $post->post_status ) {
 			Logger::warning( 'Post not published, skipping sync', array( 'post_id' => $post_id, 'status' => $post->post_status ) );
 			self::update_sync_meta( $post_id, 'failed' );
-			return new \WP_Error( 'post_not_published', __( 'Only published posts can be synced', 'atomic-jamstack-connector' ) );
+			return new \WP_Error( 'post_not_published', __( 'Only published posts can be synced', 'ajc-bridge' ) );
 		}
 
 		// Get publishing strategy from settings
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$strategy = $settings['publishing_strategy'] ?? 'wordpress_only';
 
 		// Migrate old settings to new strategy if needed
@@ -89,12 +89,12 @@ class Sync_Runner {
 				Logger::info( 'Sync skipped (wordpress_only mode)', array( 'post_id' => $post_id ) );
 				return array(
 					'status'  => 'skipped',
-					'message' => __( 'WordPress-only mode - sync disabled', 'atomic-jamstack-connector' ),
+					'message' => __( 'WordPress-only mode - sync disabled', 'ajc-bridge' ),
 				);
 
 			case 'wordpress_devto':
 				// WordPress is canonical, optionally syndicate to dev.to
-				$publish_devto = get_post_meta( $post_id, '_atomic_jamstack_publish_devto', true );
+				$publish_devto = get_post_meta( $post_id, '_ajc_bridge_publish_devto', true );
 				
 				if ( '1' === $publish_devto ) {
 					$wordpress_url = $settings['devto_site_url'] ?? get_site_url();
@@ -106,7 +106,7 @@ class Sync_Runner {
 					Logger::info( 'Dev.to sync skipped (checkbox not checked)', array( 'post_id' => $post_id ) );
 					return array(
 						'status'  => 'skipped',
-						'message' => __( 'Dev.to sync not enabled for this post', 'atomic-jamstack-connector' ),
+						'message' => __( 'Dev.to sync not enabled for this post', 'ajc-bridge' ),
 					);
 				}
 				break;
@@ -131,7 +131,7 @@ class Sync_Runner {
 				$results['github'] = self::sync_to_github( $post );
 
 				// Optionally sync to dev.to if checkbox checked
-				$publish_devto = get_post_meta( $post_id, '_atomic_jamstack_publish_devto', true );
+				$publish_devto = get_post_meta( $post_id, '_ajc_bridge_publish_devto', true );
 				
 				if ( '1' === $publish_devto ) {
 					$github_url    = $settings['github_site_url'] ?? '';
@@ -150,7 +150,7 @@ class Sync_Runner {
 					'invalid_strategy',
 					sprintf(
 						/* translators: %s: strategy name */
-						__( 'Unknown publishing strategy: %s', 'atomic-jamstack-connector' ),
+						__( 'Unknown publishing strategy: %s', 'ajc-bridge' ),
 						$strategy
 					)
 				);
@@ -241,7 +241,7 @@ class Sync_Runner {
 				'status'       => 'partial',
 				'github'       => $github_result,
 				'devto'        => $devto_result,
-				'message'      => __( 'Published to GitHub successfully, but Dev.to syndication failed.', 'atomic-jamstack-connector' ),
+				'message'      => __( 'Published to GitHub successfully, but Dev.to syndication failed.', 'ajc-bridge' ),
 			);
 		}
 
@@ -260,7 +260,7 @@ class Sync_Runner {
 			'status'  => 'success',
 			'github'  => $github_result,
 			'devto'   => $devto_result,
-			'message' => __( 'Published to GitHub and syndicated to Dev.to successfully.', 'atomic-jamstack-connector' ),
+			'message' => __( 'Published to GitHub and syndicated to Dev.to successfully.', 'ajc-bridge' ),
 		);
 	}
 
@@ -291,18 +291,18 @@ class Sync_Runner {
 
 		try {
 			// Load Dev.to adapter
-			require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-devto-adapter.php';
-			$adapter = new \AtomicJamstack\Adapters\DevTo_Adapter();
+			require_once AJC_BRIDGE_PATH . 'adapters/class-devto-adapter.php';
+			$adapter = new \AjcBridge\Adapters\DevTo_Adapter();
 
 			// Convert to markdown with front matter (pass canonical URL)
 			$markdown = $adapter->convert( $post, $canonical_url );
 
 			// Initialize API client
-			require_once ATOMIC_JAMSTACK_PATH . 'core/class-devto-api.php';
+			require_once AJC_BRIDGE_PATH . 'core/class-devto-api.php';
 			$devto_api = new DevTo_API();
 
 			// Check if article already exists on Dev.to
-			$existing_article_id = get_post_meta( $post_id, '_atomic_jamstack_devto_id', true );
+			$existing_article_id = get_post_meta( $post_id, '_ajc_bridge_devto_id', true );
 			$existing_article_id = $existing_article_id ? (int) $existing_article_id : null;
 
 			// Create or update article
@@ -323,17 +323,17 @@ class Sync_Runner {
 
 			// Store article ID for future updates (if creating new article)
 			if ( isset( $result['id'] ) && ! $existing_article_id ) {
-				update_post_meta( $post_id, '_atomic_jamstack_devto_id', $result['id'] );
+				update_post_meta( $post_id, '_ajc_bridge_devto_id', $result['id'] );
 				Logger::info( 'Saved Dev.to article ID', array( 'post_id' => $post_id, 'article_id' => $result['id'] ) );
 			}
 
 			// Store article URL if available
 			if ( isset( $result['url'] ) ) {
-				update_post_meta( $post_id, '_atomic_jamstack_devto_url', $result['url'] );
+				update_post_meta( $post_id, '_ajc_bridge_devto_url', $result['url'] );
 			}
 
 			// Store last sync timestamp
-			update_post_meta( $post_id, '_atomic_jamstack_devto_sync_time', time() );
+			update_post_meta( $post_id, '_ajc_bridge_devto_sync_time', time() );
 
 			$sync_result = $result;
 
@@ -363,11 +363,11 @@ class Sync_Runner {
 				self::update_sync_meta( $post_id, 'failed', $sync_error->get_error_message() );
 			} else {
 				self::update_sync_meta( $post_id, 'success' );
-				update_post_meta( $post_id, '_jamstack_sync_last', time() );
+				update_post_meta( $post_id, '_ajc_sync_last', time() );
 			}
 
 			// Clear start time
-			delete_post_meta( $post_id, '_jamstack_sync_start_time' );
+			delete_post_meta( $post_id, '_ajc_sync_start_time' );
 		}
 
 		// Return result or error
@@ -418,7 +418,7 @@ class Sync_Runner {
 			self::update_sync_meta( $post_id, 'processing' );
 			
 			// Wrap entire sync process in try-catch-finally for robust error handling
-			require_once ATOMIC_JAMSTACK_PATH . 'core/class-media-processor.php';
+			require_once AJC_BRIDGE_PATH . 'core/class-media-processor.php';
 			$media_processor = new Media_Processor();
 
 			// Collect featured image data
@@ -431,10 +431,10 @@ class Sync_Runner {
 			$image_mapping = $images_result['mappings'] ?? array();
 
 			// Load adapter
-			require_once ATOMIC_JAMSTACK_PATH . 'adapters/interface-adapter.php';
-			require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
+			require_once AJC_BRIDGE_PATH . 'adapters/interface-adapter.php';
+			require_once AJC_BRIDGE_PATH . 'adapters/class-hugo-adapter.php';
 
-			$adapter = new \AtomicJamstack\Adapters\Hugo_Adapter();
+			$adapter = new \AjcBridge\Adapters\Hugo_Adapter();
 
 			// Convert to Markdown with image path replacements and featured image
 			$markdown_content = $adapter->convert( $post, $image_mapping, $featured_image_path );
@@ -502,15 +502,15 @@ class Sync_Runner {
 			}
 
 			// Cache file path for future deletions
-			update_post_meta( $post_id, '_jamstack_file_path', $file_path );
+			update_post_meta( $post_id, '_ajc_file_path', $file_path );
 
 			// Save commit URL for monitoring dashboard
 			if ( isset( $result['commit_sha'] ) ) {
-				$settings   = get_option( 'atomic_jamstack_settings', array() );
+				$settings   = get_option( 'ajc_bridge_settings', array() );
 				$repo       = isset( $settings['github_repo'] ) ? $settings['github_repo'] : '';
 				if ( ! empty( $repo ) ) {
 					$commit_url = sprintf( 'https://github.com/%s/commit/%s', $repo, $result['commit_sha'] );
-					update_post_meta( $post_id, '_jamstack_last_commit_url', $commit_url );
+					update_post_meta( $post_id, '_ajc_last_commit_url', $commit_url );
 					Logger::info( 'Commit URL saved', array( 'post_id' => $post_id, 'url' => $commit_url ) );
 				}
 			}
@@ -575,7 +575,7 @@ class Sync_Runner {
 			}
 			
 			// Clear start time
-			delete_post_meta( $post_id, '_jamstack_sync_start_time' );
+			delete_post_meta( $post_id, '_ajc_sync_start_time' );
 		}
 	}
 
@@ -619,8 +619,8 @@ class Sync_Runner {
 	 * @return void
 	 */
 	private static function update_sync_meta( int $post_id, string $status ): void {
-		update_post_meta( $post_id, '_jamstack_sync_status', $status );
-		update_post_meta( $post_id, '_jamstack_sync_last', current_time( 'mysql' ) );
+		update_post_meta( $post_id, '_ajc_sync_status', $status );
+		update_post_meta( $post_id, '_ajc_sync_last', current_time( 'mysql' ) );
 	}
 
 	/**
@@ -634,7 +634,7 @@ class Sync_Runner {
 	 * @return void
 	 */
 	private static function check_safety_timeout( int $post_id ): void {
-		$start_time = get_post_meta( $post_id, '_jamstack_sync_start_time', true );
+		$start_time = get_post_meta( $post_id, '_ajc_sync_start_time', true );
 		
 		if ( ! $start_time ) {
 			return; // No sync in progress
@@ -653,7 +653,7 @@ class Sync_Runner {
 			);
 			
 			self::update_sync_meta( $post_id, 'failed' );
-			delete_post_meta( $post_id, '_jamstack_sync_start_time' );
+			delete_post_meta( $post_id, '_ajc_sync_start_time' );
 		}
 	}
 
@@ -688,7 +688,7 @@ class Sync_Runner {
 			);
 
 			// Try to get cached file path from meta
-			$cached_path = get_post_meta( $post_id, '_jamstack_file_path', true );
+			$cached_path = get_post_meta( $post_id, '_ajc_file_path', true );
 
 			if ( empty( $cached_path ) ) {
 				Logger::error(
@@ -697,14 +697,14 @@ class Sync_Runner {
 				);
 				return new \WP_Error(
 					'post_not_found',
-					__( 'Post not found and no cached file path available', 'atomic-jamstack-connector' )
+					__( 'Post not found and no cached file path available', 'ajc-bridge' )
 				);
 			}
 
 			$file_path = $cached_path;
 		} else {
 			// Post exists, try to use cached path first
-			$cached_path = get_post_meta( $post_id, '_jamstack_file_path', true );
+			$cached_path = get_post_meta( $post_id, '_ajc_file_path', true );
 
 			if ( ! empty( $cached_path ) ) {
 				// Use cached path
@@ -718,14 +718,14 @@ class Sync_Runner {
 				);
 			} else {
 				// Generate file path using adapter
-				require_once ATOMIC_JAMSTACK_PATH . 'adapters/interface-adapter.php';
-				require_once ATOMIC_JAMSTACK_PATH . 'adapters/class-hugo-adapter.php';
+				require_once AJC_BRIDGE_PATH . 'adapters/interface-adapter.php';
+				require_once AJC_BRIDGE_PATH . 'adapters/class-hugo-adapter.php';
 
-				$adapter   = new \AtomicJamstack\Adapters\Hugo_Adapter();
+				$adapter   = new \AjcBridge\Adapters\Hugo_Adapter();
 				$file_path = $adapter->get_file_path( $post );
 
 				// Cache the file path for future use
-				update_post_meta( $post_id, '_jamstack_file_path', $file_path );
+				update_post_meta( $post_id, '_ajc_file_path', $file_path );
 
 				Logger::info(
 					'Generated and cached file path',

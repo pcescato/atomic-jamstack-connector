@@ -7,9 +7,9 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Admin;
+namespace AjcBridge\Admin;
 
-use AtomicJamstack\Core\Queue_Manager;
+use AjcBridge\Core\Queue_Manager;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -36,9 +36,13 @@ class Columns {
 		add_filter( 'manage_pages_columns', array( __CLASS__, 'add_column' ) );
 		add_action( 'manage_pages_custom_column', array( __CLASS__, 'render_column' ), 10, 2 );
 
-		// Add styles and actions
-		add_action( 'admin_head', array( __CLASS__, 'add_column_styles' ) );
+		// Enqueue admin assets
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
+		
+		// Add row actions
 		add_filter( 'post_row_actions', array( __CLASS__, 'add_row_actions' ), 10, 2 );
+		
+		// AJAX handlers
 		add_action( 'wp_ajax_jamstack_sync_now', array( __CLASS__, 'ajax_sync_now' ) );
 	}
 
@@ -55,7 +59,7 @@ class Columns {
 		foreach ( $columns as $key => $value ) {
 			$new_columns[ $key ] = $value;
 			if ( 'title' === $key ) {
-				$new_columns['jamstack_sync'] = __( 'Jamstack Sync', 'atomic-jamstack-connector' );
+				$new_columns['jamstack_sync'] = __( 'Jamstack Sync', 'ajc-bridge' );
 			}
 		}
 
@@ -94,9 +98,9 @@ class Columns {
 			$time_diff = human_time_diff( (int) $timestamp, current_time( 'timestamp' ) );
 			printf(
 				'<br><small class="jamstack-timestamp">%s %s</small>',
-				esc_html( $label === __( 'Success', 'atomic-jamstack-connector' ) ? __( 'Synced', 'atomic-jamstack-connector' ) : __( 'Updated', 'atomic-jamstack-connector' ) ),
+				esc_html( $label === __( 'Success', 'ajc-bridge' ) ? __( 'Synced', 'ajc-bridge' ) : __( 'Updated', 'ajc-bridge' ) ),
 				/* translators: %s: human-readable time difference */
-				esc_html( sprintf( __( '%s ago', 'atomic-jamstack-connector' ), $time_diff ) )
+				esc_html( sprintf( __( '%s ago', 'ajc-bridge' ), $time_diff ) )
 			);
 		}
 	}
@@ -133,69 +137,61 @@ class Columns {
 	 */
 	private static function get_status_label( string $status ): string {
 		$labels = array(
-			Queue_Manager::STATUS_PENDING    => __( 'Pending', 'atomic-jamstack-connector' ),
-			Queue_Manager::STATUS_PROCESSING => __( 'Processing', 'atomic-jamstack-connector' ),
-			Queue_Manager::STATUS_SUCCESS    => __( 'Success', 'atomic-jamstack-connector' ),
-			Queue_Manager::STATUS_ERROR      => __( 'Error', 'atomic-jamstack-connector' ),
-			Queue_Manager::STATUS_CANCELLED  => __( 'Cancelled', 'atomic-jamstack-connector' ),
-			'deleting'                       => __( 'Deleting', 'atomic-jamstack-connector' ),
-			'deleted'                        => __( 'Deleted', 'atomic-jamstack-connector' ),
-			'delete_error'                   => __( 'Delete Error', 'atomic-jamstack-connector' ),
-			'unknown'                        => __( 'Not Synced', 'atomic-jamstack-connector' ),
+			Queue_Manager::STATUS_PENDING    => __( 'Pending', 'ajc-bridge' ),
+			Queue_Manager::STATUS_PROCESSING => __( 'Processing', 'ajc-bridge' ),
+			Queue_Manager::STATUS_SUCCESS    => __( 'Success', 'ajc-bridge' ),
+			Queue_Manager::STATUS_ERROR      => __( 'Error', 'ajc-bridge' ),
+			Queue_Manager::STATUS_CANCELLED  => __( 'Cancelled', 'ajc-bridge' ),
+			'deleting'                       => __( 'Deleting', 'ajc-bridge' ),
+			'deleted'                        => __( 'Deleted', 'ajc-bridge' ),
+			'delete_error'                   => __( 'Delete Error', 'ajc-bridge' ),
+			'unknown'                        => __( 'Not Synced', 'ajc-bridge' ),
 		);
 
 		return $labels[ $status ] ?? $labels['unknown'];
 	}
 
 	/**
-	 * Add inline styles for status column
+	 * Enqueue admin assets for posts list page
 	 *
+	 * @param string $hook Current admin page hook.
 	 * @return void
 	 */
-	public static function add_column_styles(): void {
-		?>
-		<style>
-			.jamstack-status {
-				display: inline-flex;
-				align-items: center;
-				gap: 4px;
-				font-weight: 500;
-			}
-			.jamstack-status .dashicons {
-				font-size: 18px;
-				width: 18px;
-				height: 18px;
-			}
-			.jamstack-status-pending .dashicons {
-				color: #f0b849;
-			}
-			.jamstack-status-processing .dashicons {
-				color: #0073aa;
-			}
-			.jamstack-status-success .dashicons {
-				color: #46b450;
-			}
-			.jamstack-status-error .dashicons {
-				color: #dc3232;
-			}
-			.jamstack-status-cancelled .dashicons {
-				color: #82878c;
-			}
-			.jamstack-status-unknown .dashicons {
-				color: #dcdcde;
-			}
-			.jamstack-timestamp {
-				color: #646970;
-			}
-			@keyframes spin {
-				from { transform: rotate(0deg); }
-				to { transform: rotate(360deg); }
-			}
-			.jamstack-status .spin {
-				animation: spin 1s linear infinite;
-			}
-		</style>
-		<?php
+	public static function enqueue_admin_assets( string $hook ): void {
+		// Only load on edit.php (posts list) and edit-tags.php (pages list)
+		if ( 'edit.php' !== $hook && 'edit-tags.php' !== $hook ) {
+			return;
+		}
+
+		// Enqueue styles
+		wp_enqueue_style(
+			'ajc-bridge-columns',
+			AJC_BRIDGE_URL . 'admin/assets/css/columns.css',
+			array(),
+			AJC_BRIDGE_VERSION
+		);
+
+		// Enqueue scripts
+		wp_enqueue_script(
+			'ajc-bridge-columns',
+			AJC_BRIDGE_URL . 'admin/assets/js/columns.js',
+			array( 'jquery' ),
+			AJC_BRIDGE_VERSION,
+			true
+		);
+
+		// Localize script with translatable strings
+		wp_localize_script(
+			'ajc-bridge-columns',
+			'ajcBridgeColumns',
+			array(
+				'textSyncing'    => __( 'Syncing...', 'ajc-bridge' ),
+				'textEnqueued'   => __( 'Enqueued!', 'ajc-bridge' ),
+				'textSyncNow'    => __( 'Sync Now', 'ajc-bridge' ),
+				'textFailed'     => __( 'Failed to sync', 'ajc-bridge' ),
+				'textAjaxError'  => __( 'AJAX error', 'ajc-bridge' ),
+			)
+		);
 	}
 
 	/**
@@ -234,68 +230,10 @@ class Columns {
 			esc_attr( $post->ID ),
 			esc_attr( $nonce ),
 			esc_url( $url ),
-			esc_html__( 'Sync Now', 'atomic-jamstack-connector' )
+			esc_html__( 'Sync Now', 'ajc-bridge' )
 		);
 
-		// Add inline script for AJAX handling (only once)
-		static $script_added = false;
-		if ( ! $script_added ) {
-			add_action( 'admin_footer', array( __CLASS__, 'add_sync_now_script' ) );
-			$script_added = true;
-		}
-
 		return $actions;
-	}
-
-	/**
-	 * Add inline script for Sync Now AJAX
-	 *
-	 * @return void
-	 */
-	public static function add_sync_now_script(): void {
-		?>
-		<script type="text/javascript">
-		jQuery(document).ready(function($) {
-			$(document).on('click', '.jamstack-sync-now', function(e) {
-				e.preventDefault();
-				
-				var $link = $(this);
-				var postId = $link.data('post-id');
-				var nonce = $link.data('nonce');
-				var ajaxUrl = $link.data('ajax-url');
-				
-				// Disable link and show loading
-				$link.css('opacity', '0.5').text('<?php echo esc_js( __( 'Syncing...', 'atomic-jamstack-connector' ) ); ?>');
-				
-				$.ajax({
-					url: ajaxUrl,
-					type: 'POST',
-					data: {
-						action: 'jamstack_sync_now',
-						post_id: postId,
-						nonce: nonce
-					},
-					success: function(response) {
-						if (response.success) {
-							$link.text('<?php echo esc_js( __( 'Enqueued!', 'atomic-jamstack-connector' ) ); ?>');
-							// Reload page after 1 second to show updated status
-							setTimeout(function() {
-								location.reload();
-							}, 1000);
-						} else {
-							$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'atomic-jamstack-connector' ) ); ?>');
-							alert(response.data || '<?php echo esc_js( __( 'Failed to sync', 'atomic-jamstack-connector' ) ); ?>');
-						}
-					},
-					error: function() {
-						$link.css('opacity', '1').text('<?php echo esc_js( __( 'Sync Now', 'atomic-jamstack-connector' ) ); ?>');
-						alert('<?php echo esc_js( __( 'AJAX error', 'atomic-jamstack-connector' ) ); ?>');
-					}
-				});
-			});
-		});
-		</script>
-		<?php
 	}
 
 	/**
@@ -310,26 +248,26 @@ class Columns {
 		// Verify nonce
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'jamstack_sync_now_' . $post_id ) ) {
-			wp_send_json_error( __( 'Security check failed', 'atomic-jamstack-connector' ) );
+			wp_send_json_error( __( 'Security check failed', 'ajc-bridge' ) );
 			return;
 		}
 
 		// Check user permissions
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			wp_send_json_error( __( 'Insufficient permissions', 'atomic-jamstack-connector' ) );
+			wp_send_json_error( __( 'Insufficient permissions', 'ajc-bridge' ) );
 			return;
 		}
 
 		// Verify post exists and is published
 		$post = get_post( $post_id );
 		if ( ! $post || 'publish' !== $post->post_status ) {
-			wp_send_json_error( __( 'Post not found or not published', 'atomic-jamstack-connector' ) );
+			wp_send_json_error( __( 'Post not found or not published', 'ajc-bridge' ) );
 			return;
 		}
 
 		// Enqueue the post
 		Queue_Manager::enqueue( $post_id );
 
-		wp_send_json_success( __( 'Post enqueued for sync', 'atomic-jamstack-connector' ) );
+		wp_send_json_success( __( 'Post enqueued for sync', 'ajc-bridge' ) );
 	}
 }

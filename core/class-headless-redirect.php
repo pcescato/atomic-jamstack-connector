@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -46,7 +46,7 @@ class Headless_Redirect {
 			return;
 		}
 
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$strategy = $settings['publishing_strategy'] ?? 'wordpress_only';
 
 		// Only redirect in headless strategies
@@ -172,7 +172,7 @@ class Headless_Redirect {
 			<meta charset="<?php bloginfo( 'charset' ); ?>">
 			<meta name="robots" content="noindex, nofollow">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
-			<title><?php esc_html_e( 'Headless WordPress', 'atomic-jamstack-connector' ); ?></title>
+			<title><?php esc_html_e( 'Headless WordPress', 'ajc-bridge' ); ?></title>
 			<style>
 				body {
 					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
@@ -219,27 +219,27 @@ class Headless_Redirect {
 			</style>
 		</head>
 		<body>
-			<h1><?php esc_html_e( 'Headless WordPress Installation', 'atomic-jamstack-connector' ); ?></h1>
+			<h1><?php esc_html_e( 'Headless WordPress Installation', 'ajc-bridge' ); ?></h1>
 			
-			<p><?php esc_html_e( 'This WordPress site is configured for headless operation.', 'atomic-jamstack-connector' ); ?></p>
+			<p><?php esc_html_e( 'This WordPress site is configured for headless operation.', 'ajc-bridge' ); ?></p>
 			
-			<p><?php esc_html_e( 'Content is published to external platforms via the Atomic Jamstack Connector plugin.', 'atomic-jamstack-connector' ); ?></p>
+			<p><?php esc_html_e( 'Content is published to external platforms via the AJC Bridge plugin.', 'ajc-bridge' ); ?></p>
 
 			<div class="notice">
-				<p><strong><?php esc_html_e( 'Configuration Needed', 'atomic-jamstack-connector' ); ?></strong></p>
+				<p><strong><?php esc_html_e( 'Configuration Needed', 'ajc-bridge' ); ?></strong></p>
 				<p>
 					<?php
 					if ( 'devto_only' === $strategy ) {
 						printf(
 							/* translators: %s: code tag */
-							esc_html__( 'Please configure your %s in plugin settings.', 'atomic-jamstack-connector' ),
-							'<code>' . esc_html__( 'Dev.to Site URL', 'atomic-jamstack-connector' ) . '</code>'
+							esc_html__( 'Please configure your %s in plugin settings.', 'ajc-bridge' ),
+							'<code>' . esc_html__( 'Dev.to Site URL', 'ajc-bridge' ) . '</code>'
 						);
 					} else {
 						printf(
 							/* translators: %s: code tag */
-							esc_html__( 'Please configure your %s in plugin settings.', 'atomic-jamstack-connector' ),
-							'<code>' . esc_html__( 'GitHub Site URL', 'atomic-jamstack-connector' ) . '</code>'
+							esc_html__( 'Please configure your %s in plugin settings.', 'ajc-bridge' ),
+							'<code>' . esc_html__( 'GitHub Site URL', 'ajc-bridge' ) . '</code>'
 						);
 					}
 					?>
@@ -248,7 +248,7 @@ class Headless_Redirect {
 
 			<?php if ( current_user_can( 'manage_options' ) ) : ?>
 				<a href="<?php echo esc_url( $admin_url ); ?>" class="button">
-					<?php esc_html_e( 'Go to Plugin Settings', 'atomic-jamstack-connector' ); ?>
+					<?php esc_html_e( 'Go to Plugin Settings', 'ajc-bridge' ); ?>
 				</a>
 			<?php endif; ?>
 		</body>

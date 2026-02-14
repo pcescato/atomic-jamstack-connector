@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -83,12 +83,12 @@ class Plugin {
 	 * @return void
 	 */
 	private function load_core_classes(): void {
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-logger.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-queue-manager.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-sync-runner.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-git-api.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-media-processor.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-headless-redirect.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-logger.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-queue-manager.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-sync-runner.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-git-api.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-media-processor.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-headless-redirect.php';
 	}
 
 	/**
@@ -118,13 +118,13 @@ class Plugin {
 	 * @return void
 	 */
 	private function load_admin(): void {
-		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-settings.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-columns.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-post-meta-box.php';
-		require_once ATOMIC_JAMSTACK_PATH . 'admin/class-admin.php';
+		require_once AJC_BRIDGE_PATH . 'admin/class-settings.php';
+		require_once AJC_BRIDGE_PATH . 'admin/class-columns.php';
+		require_once AJC_BRIDGE_PATH . 'admin/class-post-meta-box.php';
+		require_once AJC_BRIDGE_PATH . 'admin/class-admin.php';
 		
-		\AtomicJamstack\Admin\Admin::init();
-		\AtomicJamstack\Admin\Post_Meta_Box::init();
+		\AjcBridge\Admin\Admin::init();
+		\AjcBridge\Admin\Post_Meta_Box::init();
 	}
 
 	/**
@@ -136,8 +136,8 @@ class Plugin {
 	 */
 	private function load_cli(): void {
 		// TODO: Load CLI classes when implemented
-		// require_once ATOMIC_JAMSTACK_PATH . 'cli/class-cli.php';
-		// WP_CLI::add_command( 'jamstack', 'AtomicJamstack\CLI\CLI' );
+		// require_once AJC_BRIDGE_PATH . 'cli/class-cli.php';
+		// WP_CLI::add_command( 'jamstack', 'AjcBridge\CLI\CLI' );
 	}
 
 	/**
@@ -242,7 +242,7 @@ class Plugin {
 		}
 
 		// Check if post was ever synced
-		$sync_status = get_post_meta( $post_id, '_jamstack_sync_status', true );
+		$sync_status = get_post_meta( $post_id, '_ajc_sync_status', true );
 
 		if ( empty( $sync_status ) || 'success' !== $sync_status ) {
 			Logger::info(
@@ -282,7 +282,7 @@ class Plugin {
 		}
 
 		// Check if post was ever synced
-		$sync_status = get_post_meta( $post_id, '_jamstack_sync_status', true );
+		$sync_status = get_post_meta( $post_id, '_ajc_sync_status', true );
 
 		if ( empty( $sync_status ) || 'success' !== $sync_status ) {
 			Logger::info(
@@ -314,7 +314,7 @@ class Plugin {
 	 * @return bool True if should sync, false otherwise.
 	 */
 	private static function should_sync_post_type( string $post_type ): bool {
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$enabled_types = $settings['enabled_post_types'] ?? array( 'post' );
 
 		// Ensure it's an array

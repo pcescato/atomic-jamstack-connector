@@ -7,10 +7,10 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Admin;
+namespace AjcBridge\Admin;
 
-use AtomicJamstack\Core\Git_API;
-use AtomicJamstack\Core\Logger;
+use AjcBridge\Core\Git_API;
+use AjcBridge\Core\Logger;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -26,7 +26,7 @@ class Settings {
 	/**
 	 * Option name for settings
 	 */
-	public const OPTION_NAME = 'atomic_jamstack_settings';
+	public const OPTION_NAME = 'ajc_bridge_settings';
 
 	/**
 	 * Settings page slug
@@ -46,11 +46,62 @@ class Settings {
 	public static function init(): void {
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 		add_action( 'admin_init', array( __CLASS__, 'handle_settings_redirect' ) );
-		add_action( 'wp_ajax_atomic_jamstack_test_connection', array( __CLASS__, 'ajax_test_connection' ) );
-		add_action( 'wp_ajax_atomic_jamstack_test_devto', array( __CLASS__, 'ajax_test_devto_connection' ) );
-		add_action( 'wp_ajax_atomic_jamstack_bulk_sync', array( __CLASS__, 'ajax_bulk_sync' ) );
-		add_action( 'wp_ajax_atomic_jamstack_get_stats', array( __CLASS__, 'ajax_get_stats' ) );
-		add_action( 'wp_ajax_atomic_jamstack_sync_single', array( __CLASS__, 'ajax_sync_single' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
+		add_action( 'wp_ajax_ajc_bridge_test_connection', array( __CLASS__, 'ajax_test_connection' ) );
+		add_action( 'wp_ajax_ajc_bridge_test_devto', array( __CLASS__, 'ajax_test_devto_connection' ) );
+		add_action( 'wp_ajax_ajc_bridge_bulk_sync', array( __CLASS__, 'ajax_bulk_sync' ) );
+		add_action( 'wp_ajax_ajc_bridge_get_stats', array( __CLASS__, 'ajax_get_stats' ) );
+		add_action( 'wp_ajax_ajc_bridge_sync_single', array( __CLASS__, 'ajax_sync_single' ) );
+	}
+
+	/**
+	 * Enqueue admin assets for settings page
+	 *
+	 * @param string $hook Current admin page hook.
+	 * @return void
+	 */
+	public static function enqueue_admin_assets( string $hook ): void {
+		// Only load on our settings page
+		if ( 'settings_page_ajc-bridge-settings' !== $hook ) {
+			return;
+		}
+
+		// Enqueue styles
+		wp_enqueue_style(
+			'ajc-bridge-settings',
+			AJC_BRIDGE_URL . 'admin/assets/css/settings.css',
+			array(),
+			AJC_BRIDGE_VERSION
+		);
+
+		// Enqueue scripts
+		wp_enqueue_script(
+			'ajc-bridge-settings',
+			AJC_BRIDGE_URL . 'admin/assets/js/settings.js',
+			array( 'jquery' ),
+			AJC_BRIDGE_VERSION,
+			true
+		);
+
+		// Localize script with translatable strings and nonces
+		wp_localize_script(
+			'ajc-bridge-settings',
+			'ajcBridgeSettings',
+			array(
+				'ajaxurl'            => admin_url( 'admin-ajax.php' ),
+				'bulkSyncNonce'      => wp_create_nonce( 'atomic-jamstack-bulk-sync' ),
+				'syncSingleNonce'    => wp_create_nonce( 'atomic-jamstack-sync-single' ),
+				'statsNonce'         => wp_create_nonce( 'atomic-jamstack-stats' ),
+				'textBulkConfirm'    => __( 'Are you sure you want to synchronize all published posts? This may take several minutes.', 'ajc-bridge' ),
+				'textStarting'       => __( 'Starting...', 'ajc-bridge' ),
+				'textSynchronize'    => __( 'Synchronize All Posts', 'ajc-bridge' ),
+				'textRequestFailed'  => __( 'Request failed', 'ajc-bridge' ),
+				'textSyncing'        => __( 'Syncing...', 'ajc-bridge' ),
+				'textSynced'         => __( 'Synced!', 'ajc-bridge' ),
+				'textSyncNow'        => __( 'Sync Now', 'ajc-bridge' ),
+				'textError'          => __( 'Error', 'ajc-bridge' ),
+			)
+		);
 	}
 
 	/**
@@ -69,8 +120,8 @@ class Settings {
 		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, self::PAGE_SLUG . '-options' ) ) {
 			wp_die(
-				esc_html__( 'Security check failed. Please try again.', 'atomic-jamstack-connector' ),
-				esc_html__( 'Security Error', 'atomic-jamstack-connector' ),
+				esc_html__( 'Security check failed. Please try again.', 'ajc-bridge' ),
+				esc_html__( 'Security Error', 'ajc-bridge' ),
 				array( 'response' => 403 )
 			);
 		}
@@ -108,82 +159,82 @@ class Settings {
 		if ( 'general' === $current_tab ) {
 			// Post Types Section
 			add_settings_section(
-				'atomic_jamstack_posttypes_section',
-				__( 'Content Types', 'atomic-jamstack-connector' ),
+				'ajc_bridge_posttypes_section',
+				__( 'Content Types', 'ajc-bridge' ),
 				array( __CLASS__, 'render_posttypes_section' ),
 				self::PAGE_SLUG
 			);
 
 			add_settings_field(
 				'enabled_post_types',
-				__( 'Synchronize', 'atomic-jamstack-connector' ),
+				__( 'Synchronize', 'ajc-bridge' ),
 				array( __CLASS__, 'render_posttypes_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_posttypes_section'
+				'ajc_bridge_posttypes_section'
 			);
 
 			add_settings_field(
 				'publishing_strategy',
-				__( 'Publishing Strategy', 'atomic-jamstack-connector' ),
+				__( 'Publishing Strategy', 'ajc-bridge' ),
 				array( __CLASS__, 'render_publishing_strategy_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_posttypes_section'
+				'ajc_bridge_posttypes_section'
 			);
 
 			add_settings_field(
 				'github_site_url',
-				__( 'GitHub Site URL', 'atomic-jamstack-connector' ),
+				__( 'GitHub Site URL', 'ajc-bridge' ),
 				array( __CLASS__, 'render_github_site_url_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_posttypes_section'
+				'ajc_bridge_posttypes_section'
 			);
 
 			add_settings_field(
 				'devto_site_url',
-				__( 'Dev.to Site URL', 'atomic-jamstack-connector' ),
+				__( 'Dev.to Site URL', 'ajc-bridge' ),
 				array( __CLASS__, 'render_devto_site_url_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_posttypes_section'
+				'ajc_bridge_posttypes_section'
 			);
 
 			// Hugo Settings Section
 			add_settings_section(
-				'atomic_jamstack_hugo_section',
-				__( 'Hugo Configuration', 'atomic-jamstack-connector' ),
+				'ajc_bridge_hugo_section',
+				__( 'Hugo Configuration', 'ajc-bridge' ),
 				array( __CLASS__, 'render_hugo_section' ),
 				self::PAGE_SLUG
 			);
 
 			add_settings_field(
 				'hugo_front_matter_template',
-				__( 'Custom Front Matter Template', 'atomic-jamstack-connector' ),
+				__( 'Custom Front Matter Template', 'ajc-bridge' ),
 				array( __CLASS__, 'render_front_matter_template_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_hugo_section'
+				'ajc_bridge_hugo_section'
 			);
 
 			// Debug Settings Section
 			add_settings_section(
-				'atomic_jamstack_debug_section',
-				__( 'Debug Settings', 'atomic-jamstack-connector' ),
+				'ajc_bridge_debug_section',
+				__( 'Debug Settings', 'ajc-bridge' ),
 				array( __CLASS__, 'render_debug_section' ),
 				self::PAGE_SLUG
 			);
 
 			add_settings_field(
 				'debug_mode',
-				__( 'Enable Debug Logging', 'atomic-jamstack-connector' ),
+				__( 'Enable Debug Logging', 'ajc-bridge' ),
 				array( __CLASS__, 'render_debug_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_debug_section'
+				'ajc_bridge_debug_section'
 			);
 
 			add_settings_field(
 				'delete_data_on_uninstall',
-				__( 'Delete data on uninstall', 'atomic-jamstack-connector' ),
+				__( 'Delete data on uninstall', 'ajc-bridge' ),
 				array( __CLASS__, 'render_uninstall_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_debug_section'
+				'ajc_bridge_debug_section'
 			);
 		}
 
@@ -191,50 +242,50 @@ class Settings {
 		if ( 'credentials' === $current_tab ) {
 			// GitHub Settings Section
 			add_settings_section(
-				'atomic_jamstack_github_section',
-				__( 'GitHub Configuration', 'atomic-jamstack-connector' ),
+				'ajc_bridge_github_section',
+				__( 'GitHub Configuration', 'ajc-bridge' ),
 				array( __CLASS__, 'render_github_section' ),
 				self::PAGE_SLUG
 			);
 
 			add_settings_field(
 				'github_repo',
-				__( 'Repository', 'atomic-jamstack-connector' ),
+				__( 'Repository', 'ajc-bridge' ),
 				array( __CLASS__, 'render_repo_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_github_section'
+				'ajc_bridge_github_section'
 			);
 
 			add_settings_field(
 				'github_branch',
-				__( 'Branch', 'atomic-jamstack-connector' ),
+				__( 'Branch', 'ajc-bridge' ),
 				array( __CLASS__, 'render_branch_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_github_section'
+				'ajc_bridge_github_section'
 			);
 
 			add_settings_field(
 				'github_token',
-				__( 'Personal Access Token', 'atomic-jamstack-connector' ),
+				__( 'Personal Access Token', 'ajc-bridge' ),
 				array( __CLASS__, 'render_token_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_github_section'
+				'ajc_bridge_github_section'
 			);
 
 			// Dev.to Settings Section
 			add_settings_section(
-				'atomic_jamstack_devto_section',
-				__( 'Dev.to Publishing', 'atomic-jamstack-connector' ),
+				'ajc_bridge_devto_section',
+				__( 'Dev.to Publishing', 'ajc-bridge' ),
 				array( __CLASS__, 'render_devto_section' ),
 				self::PAGE_SLUG
 			);
 
 			add_settings_field(
 				'devto_api_key',
-				__( 'Dev.to API Key', 'atomic-jamstack-connector' ),
+				__( 'Dev.to API Key', 'ajc-bridge' ),
 				array( __CLASS__, 'render_devto_api_key_field' ),
 				self::PAGE_SLUG,
-				'atomic_jamstack_devto_section'
+				'ajc_bridge_devto_section'
 			);
 		}
 	}
@@ -263,7 +314,7 @@ class Settings {
 				add_settings_error(
 					self::OPTION_NAME,
 					'invalid_repo',
-					__( 'Repository must be in format: owner/repo', 'atomic-jamstack-connector' ),
+					__( 'Repository must be in format: owner/repo', 'ajc-bridge' ),
 					'error'
 				);
 			}
@@ -481,7 +532,7 @@ class Settings {
 	 */
 	public static function render_github_section(): void {
 		echo '<p>';
-		esc_html_e( 'Configure your GitHub repository connection. You will need a Personal Access Token with repository write permissions.', 'atomic-jamstack-connector' );
+		esc_html_e( 'Configure your GitHub repository connection. You will need a Personal Access Token with repository write permissions.', 'ajc-bridge' );
 		echo '</p>';
 	}
 
@@ -503,7 +554,7 @@ class Settings {
 			required
 		/>
 		<p class="description">
-			<?php esc_html_e( 'Format: owner/repository (e.g., johndoe/my-hugo-site)', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Format: owner/repository (e.g., johndoe/my-hugo-site)', 'ajc-bridge' ); ?>
 		</p>
 		<?php
 	}
@@ -525,7 +576,7 @@ class Settings {
 			placeholder="main"
 		/>
 		<p class="description">
-			<?php esc_html_e( 'Target branch for commits (default: main)', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Target branch for commits (default: main)', 'ajc-bridge' ); ?>
 		</p>
 		<?php
 	}
@@ -539,7 +590,7 @@ class Settings {
 		$settings   = get_option( self::OPTION_NAME, array() );
 		$has_token  = ! empty( $settings['github_token'] );
 		$show_value = $has_token ? '••••••••••••••••' : '';
-		$placeholder = $has_token ? __( 'Token already saved', 'atomic-jamstack-connector' ) : 'ghp_xxxxxxxxxxxx';
+		$placeholder = $has_token ? __( 'Token already saved', 'ajc-bridge' ) : 'ghp_xxxxxxxxxxxx';
 		?>
 		<input 
 			type="password" 
@@ -551,11 +602,11 @@ class Settings {
 		<p class="description">
 			<?php
 			if ( $has_token ) {
-				esc_html_e( 'Token is securely stored. Leave blank to keep existing token, or enter a new token to update.', 'atomic-jamstack-connector' );
+				esc_html_e( 'Token is securely stored. Leave blank to keep existing token, or enter a new token to update.', 'ajc-bridge' );
 			} else {
 				printf(
 					/* translators: %s: GitHub tokens URL */
-					esc_html__( 'Create a token at %s with repo permissions.', 'atomic-jamstack-connector' ),
+					esc_html__( 'Create a token at %s with repo permissions.', 'ajc-bridge' ),
 					'<a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com/settings/tokens</a>'
 				);
 			}
@@ -563,7 +614,7 @@ class Settings {
 		</p>
 		<p>
 			<button type="button" id="atomic-jamstack-test-connection" class="button button-secondary">
-				<?php esc_html_e( 'Test Connection', 'atomic-jamstack-connector' ); ?>
+				<?php esc_html_e( 'Test Connection', 'ajc-bridge' ); ?>
 			</button>
 			<span id="atomic-jamstack-test-result"></span>
 		</p>
@@ -577,7 +628,7 @@ class Settings {
 	 */
 	public static function render_debug_section(): void {
 		echo '<p>';
-		esc_html_e( 'Enable debug logging to troubleshoot sync issues.', 'atomic-jamstack-connector' );
+		esc_html_e( 'Enable debug logging to troubleshoot sync issues.', 'ajc-bridge' );
 		echo '</p>';
 	}
 
@@ -597,20 +648,20 @@ class Settings {
 				value="1"
 				<?php checked( $checked ); ?>
 			/>
-			<?php esc_html_e( 'Enable detailed logging for debugging', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Enable detailed logging for debugging', 'ajc-bridge' ); ?>
 		</label>
 		<p class="description">
 			<?php
-			esc_html_e( 'Logs will be written to wp-content/uploads/atomic-jamstack-logs/', 'atomic-jamstack-connector' );
+			esc_html_e( 'Logs will be written to wp-content/uploads/atomic-jamstack-logs/', 'ajc-bridge' );
 			
 			// Show log file path if debug is enabled
 			if ( $checked ) {
-				$log_file = \AtomicJamstack\Core\Logger::get_log_file_path();
+				$log_file = \AjcBridge\Core\Logger::get_log_file_path();
 				if ( $log_file ) {
 					echo '<br>';
 					printf(
 						/* translators: %s: log file path */
-						esc_html__( 'Current log file: %s', 'atomic-jamstack-connector' ),
+						esc_html__( 'Current log file: %s', 'ajc-bridge' ),
 						'<code>' . esc_html( $log_file ) . '</code>'
 					);
 					
@@ -618,11 +669,11 @@ class Settings {
 						$file_size = size_format( filesize( $log_file ) );
 						echo ' (' . esc_html( $file_size ) . ')';
 					} else {
-						echo ' <span style="color: #d63638;">(' . esc_html__( 'File not created yet', 'atomic-jamstack-connector' ) . ')</span>';
+						echo ' <span style="color: #d63638;">(' . esc_html__( 'File not created yet', 'ajc-bridge' ) . ')</span>';
 					}
 				} else {
 					echo '<br><span style="color: #d63638;">';
-					esc_html_e( 'Warning: Upload directory is not accessible. Logs will only go to WordPress debug.log', 'atomic-jamstack-connector' );
+					esc_html_e( 'Warning: Upload directory is not accessible. Logs will only go to WordPress debug.log', 'ajc-bridge' );
 					echo '</span>';
 				}
 			}
@@ -647,11 +698,11 @@ class Settings {
 				value="1"
 				<?php checked( $checked ); ?>
 			/>
-			<?php esc_html_e( 'Permanently delete all plugin data when uninstalling', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Permanently delete all plugin data when uninstalling', 'ajc-bridge' ); ?>
 		</label>
 		<p class="description" style="color: #d63638;">
-			<strong><?php esc_html_e( 'Warning:', 'atomic-jamstack-connector' ); ?></strong>
-			<?php esc_html_e( 'If checked, all settings and synchronization logs will be permanently deleted from the database when the plugin is uninstalled. This action cannot be undone.', 'atomic-jamstack-connector' ); ?>
+			<strong><?php esc_html_e( 'Warning:', 'ajc-bridge' ); ?></strong>
+			<?php esc_html_e( 'If checked, all settings and synchronization logs will be permanently deleted from the database when the plugin is uninstalled. This action cannot be undone.', 'ajc-bridge' ); ?>
 		</p>
 		<?php
 	}
@@ -663,7 +714,7 @@ class Settings {
 	 */
 	public static function render_posttypes_section(): void {
 		echo '<p>';
-		esc_html_e( 'Choose which content types should be synchronized to your Hugo site.', 'atomic-jamstack-connector' );
+		esc_html_e( 'Choose which content types should be synchronized to your Hugo site.', 'ajc-bridge' );
 		echo '</p>';
 	}
 
@@ -678,12 +729,12 @@ class Settings {
 
 		$post_types = array(
 			'post' => array(
-				'label' => __( 'Posts', 'atomic-jamstack-connector' ),
-				'description' => __( 'Standard blog posts (synced to content/posts/)', 'atomic-jamstack-connector' ),
+				'label' => __( 'Posts', 'ajc-bridge' ),
+				'description' => __( 'Standard blog posts (synced to content/posts/)', 'ajc-bridge' ),
 			),
 			'page' => array(
-				'label' => __( 'Pages', 'atomic-jamstack-connector' ),
-				'description' => __( 'Static pages (synced to content/)', 'atomic-jamstack-connector' ),
+				'label' => __( 'Pages', 'ajc-bridge' ),
+				'description' => __( 'Static pages (synced to content/)', 'ajc-bridge' ),
 			),
 		);
 
@@ -736,24 +787,24 @@ class Settings {
 
 		$strategies = array(
 			'wordpress_only'     => array(
-				'label'       => __( 'WordPress Only', 'atomic-jamstack-connector' ),
-				'description' => __( 'No external sync. Plugin settings available but sync disabled. WordPress remains your public site.', 'atomic-jamstack-connector' ),
+				'label'       => __( 'WordPress Only', 'ajc-bridge' ),
+				'description' => __( 'No external sync. Plugin settings available but sync disabled. WordPress remains your public site.', 'ajc-bridge' ),
 			),
 			'wordpress_devto'    => array(
-				'label'       => __( 'WordPress + dev.to Syndication', 'atomic-jamstack-connector' ),
-				'description' => __( 'WordPress remains your public site (canonical). Optionally syndicate posts to dev.to with canonical_url pointing to WordPress. Check "Publish to dev.to" per post.', 'atomic-jamstack-connector' ),
+				'label'       => __( 'WordPress + dev.to Syndication', 'ajc-bridge' ),
+				'description' => __( 'WordPress remains your public site (canonical). Optionally syndicate posts to dev.to with canonical_url pointing to WordPress. Check "Publish to dev.to" per post.', 'ajc-bridge' ),
 			),
 			'github_only'        => array(
-				'label'       => __( 'GitHub Only (Headless)', 'atomic-jamstack-connector' ),
-				'description' => __( 'WordPress is headless (admin-only). All published posts sync to Hugo/Jekyll on GitHub Pages. WordPress frontend redirects to your static site.', 'atomic-jamstack-connector' ),
+				'label'       => __( 'GitHub Only (Headless)', 'ajc-bridge' ),
+				'description' => __( 'WordPress is headless (admin-only). All published posts sync to Hugo/Jekyll on GitHub Pages. WordPress frontend redirects to your static site.', 'ajc-bridge' ),
 			),
 			'devto_only'         => array(
-				'label'       => __( 'Dev.to Only (Headless)', 'atomic-jamstack-connector' ),
-				'description' => __( 'WordPress is headless. All published posts sync to dev.to. WordPress frontend redirects to dev.to.', 'atomic-jamstack-connector' ),
+				'label'       => __( 'Dev.to Only (Headless)', 'ajc-bridge' ),
+				'description' => __( 'WordPress is headless. All published posts sync to dev.to. WordPress frontend redirects to dev.to.', 'ajc-bridge' ),
 			),
 			'dual_github_devto'  => array(
-				'label'       => __( 'Dual Publishing (GitHub + dev.to)', 'atomic-jamstack-connector' ),
-				'description' => __( 'WordPress is headless. Posts sync to GitHub (canonical). Optionally syndicate to dev.to with canonical_url. Check "Publish to dev.to" per post.', 'atomic-jamstack-connector' ),
+				'label'       => __( 'Dual Publishing (GitHub + dev.to)', 'ajc-bridge' ),
+				'description' => __( 'WordPress is headless. Posts sync to GitHub (canonical). Optionally syndicate to dev.to with canonical_url. Check "Publish to dev.to" per post.', 'ajc-bridge' ),
 			),
 		);
 
@@ -776,7 +827,7 @@ class Settings {
 		endforeach;
 		?>
 		<p class="description">
-			<?php esc_html_e( 'Configure credentials in the Credentials tab. For headless modes, configure redirect URLs below.', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Configure credentials in the Credentials tab. For headless modes, configure redirect URLs below.', 'ajc-bridge' ); ?>
 		</p>
 		<?php
 	}
@@ -799,7 +850,7 @@ class Settings {
 			class="regular-text"
 		/>
 		<p class="description">
-			<?php esc_html_e( 'Your deployed Hugo/Jekyll site URL (e.g., GitHub Pages). Used for canonical URLs in dual publishing mode and WordPress frontend redirects in GitHub headless mode.', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Your deployed Hugo/Jekyll site URL (e.g., GitHub Pages). Used for canonical URLs in dual publishing mode and WordPress frontend redirects in GitHub headless mode.', 'ajc-bridge' ); ?>
 		</p>
 		<?php
 	}
@@ -821,7 +872,7 @@ class Settings {
 			class="regular-text"
 		/>
 		<p class="description">
-			<?php esc_html_e( 'Your dev.to profile URL or your WordPress site URL for canonical links. Used for WordPress frontend redirects in dev.to-only mode and as canonical URL when syndicating from WordPress.', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Your dev.to profile URL or your WordPress site URL for canonical links. Used for WordPress frontend redirects in dev.to-only mode and as canonical URL when syndicating from WordPress.', 'ajc-bridge' ); ?>
 		</p>
 		<?php
 	}
@@ -833,7 +884,7 @@ class Settings {
 	 */
 	public static function render_hugo_section(): void {
 		echo '<p>';
-		esc_html_e( 'Customize how WordPress content is converted to Hugo Markdown format.', 'atomic-jamstack-connector' );
+		esc_html_e( 'Customize how WordPress content is converted to Hugo Markdown format.', 'ajc-bridge' );
 		echo '</p>';
 	}
 
@@ -857,10 +908,10 @@ class Settings {
 			class="large-text code"
 		><?php echo esc_textarea( $value ); ?></textarea>
 		<p class="description">
-			<?php esc_html_e( 'Define your raw Front Matter here. You must include your own delimiters (e.g., --- for YAML or +++ for TOML).', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Define your raw Front Matter here. You must include your own delimiters (e.g., --- for YAML or +++ for TOML).', 'ajc-bridge' ); ?>
 		</p>
 		<p class="description">
-			<?php esc_html_e( 'Available placeholders:', 'atomic-jamstack-connector' ); ?>
+			<?php esc_html_e( 'Available placeholders:', 'ajc-bridge' ); ?>
 			<code>{{title}}</code>, 
 			<code>{{date}}</code>, 
 			<code>{{author}}</code>, 
@@ -882,7 +933,7 @@ class Settings {
 		?>
 		<p>
 			<?php
-			esc_html_e( 'Configure Dev.to API integration for publishing posts directly to your Dev.to account.', 'atomic-jamstack-connector' );
+			esc_html_e( 'Configure Dev.to API integration for publishing posts directly to your Dev.to account.', 'ajc-bridge' );
 			?>
 		</p>
 		<?php
@@ -909,14 +960,14 @@ class Settings {
 			<?php
 			printf(
 				/* translators: %s: Dev.to API settings URL */
-				esc_html__( 'Get your API key from %s', 'atomic-jamstack-connector' ),
+				esc_html__( 'Get your API key from %s', 'ajc-bridge' ),
 				'<a href="https://dev.to/settings/extensions" target="_blank" rel="noopener noreferrer">dev.to/settings/extensions</a>'
 			);
 			?>
 		</p>
 		<p>
 			<button type="button" id="devto_test_connection" class="button">
-				<?php esc_html_e( 'Test Connection', 'atomic-jamstack-connector' ); ?>
+				<?php esc_html_e( 'Test Connection', 'ajc-bridge' ); ?>
 			</button>
 			<span id="devto_test_result"></span>
 		</p>
@@ -931,7 +982,7 @@ class Settings {
 	public static function render_settings_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
-				esc_html__( 'You do not have sufficient permissions to access this page.', 'atomic-jamstack-connector' )
+				esc_html__( 'You do not have sufficient permissions to access this page.', 'ajc-bridge' )
 			);
 		}
 
@@ -940,18 +991,18 @@ class Settings {
 		$settings_tab = isset( $_GET['settings_tab'] ) ? sanitize_key( $_GET['settings_tab'] ) : 'general';
 		?>
 		<div class="wrap atomic-jamstack-settings-wrap">
-			<h1><?php esc_html_e( 'Jamstack Sync Settings', 'atomic-jamstack-connector' ); ?></h1>
+			<h1><?php esc_html_e( 'Jamstack Sync Settings', 'ajc-bridge' ); ?></h1>
 			
 			<!-- Settings Sub-Tab Navigation -->
 			<div class="atomic-jamstack-subtabs">
 				<h2 class="nav-tab-wrapper">
 					<a href="?page=jamstack-sync&settings_tab=general" 
 					   class="nav-tab <?php echo 'general' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-						<?php esc_html_e( 'General', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'General', 'ajc-bridge' ); ?>
 					</a>
 					<a href="?page=jamstack-sync&settings_tab=credentials" 
 					   class="nav-tab <?php echo 'credentials' === $settings_tab ? 'nav-tab-active' : ''; ?>">
-						<?php esc_html_e( 'Credentials', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Credentials', 'ajc-bridge' ); ?>
 					</a>
 				</h2>
 			</div>
@@ -981,12 +1032,12 @@ class Settings {
 	public static function render_bulk_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die(
-				esc_html__( 'You do not have sufficient permissions to access this page.', 'atomic-jamstack-connector' )
+				esc_html__( 'You do not have sufficient permissions to access this page.', 'ajc-bridge' )
 			);
 		}
 		?>
 		<div class="wrap atomic-jamstack-settings-wrap">
-			<h1><?php esc_html_e( 'Bulk Operations', 'atomic-jamstack-connector' ); ?></h1>
+			<h1><?php esc_html_e( 'Bulk Operations', 'ajc-bridge' ); ?></h1>
 			<?php self::render_bulk_tab(); ?>
 		</div>
 		<?php
@@ -1000,12 +1051,12 @@ class Settings {
 	public static function render_history_page(): void {
 		if ( ! current_user_can( 'publish_posts' ) ) {
 			wp_die(
-				esc_html__( 'You do not have sufficient permissions to access this page.', 'atomic-jamstack-connector' )
+				esc_html__( 'You do not have sufficient permissions to access this page.', 'ajc-bridge' )
 			);
 		}
 		?>
 		<div class="wrap atomic-jamstack-settings-wrap">
-			<h1><?php esc_html_e( 'Sync History', 'atomic-jamstack-connector' ); ?></h1>
+			<h1><?php esc_html_e( 'Sync History', 'ajc-bridge' ); ?></h1>
 			<?php self::render_monitor_tab(); ?>
 		</div>
 		<?php
@@ -1022,12 +1073,12 @@ class Settings {
 			<div id="atomic-jamstack-bulk-sync-section">
 				<button type="button" id="atomic-jamstack-bulk-sync-button" class="button button-secondary">
 					<span class="dashicons dashicons-update"></span>
-					<?php esc_html_e( 'Synchronize All Posts', 'atomic-jamstack-connector' ); ?>
+					<?php esc_html_e( 'Synchronize All Posts', 'ajc-bridge' ); ?>
 				</button>
 				
 				<div id="atomic-jamstack-bulk-status" style="margin-top: 15px; display: none;">
 					<p>
-						<strong><?php esc_html_e( 'Bulk Sync Status:', 'atomic-jamstack-connector' ); ?></strong>
+						<strong><?php esc_html_e( 'Bulk Sync Status:', 'ajc-bridge' ); ?></strong>
 						<span id="atomic-jamstack-bulk-message"></span>
 					</p>
 					<div class="atomic-jamstack-progress-bar" style="background: #f0f0f1; height: 30px; border-radius: 3px; overflow: hidden; position: relative;">
@@ -1037,140 +1088,44 @@ class Settings {
 				</div>
 
 				<div id="atomic-jamstack-queue-stats" style="margin-top: 20px;">
-					<h3><?php esc_html_e( 'Queue Statistics', 'atomic-jamstack-connector' ); ?></h3>
+					<h3><?php esc_html_e( 'Queue Statistics', 'ajc-bridge' ); ?></h3>
 					<table class="widefat" style="max-width: 600px;">
 						<tbody>
 							<tr>
-								<td><?php esc_html_e( 'Total Posts:', 'atomic-jamstack-connector' ); ?></td>
+								<td><?php esc_html_e( 'Total Posts:', 'ajc-bridge' ); ?></td>
 								<td><strong id="stat-total">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Successfully Synced:', 'atomic-jamstack-connector' ); ?></td>
+								<td><?php esc_html_e( 'Successfully Synced:', 'ajc-bridge' ); ?></td>
 								<td><strong id="stat-success" style="color: #46b450;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Pending:', 'atomic-jamstack-connector' ); ?></td>
+								<td><?php esc_html_e( 'Pending:', 'ajc-bridge' ); ?></td>
 								<td><strong id="stat-pending" style="color: #f0ad4e;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Processing:', 'atomic-jamstack-connector' ); ?></td>
+								<td><?php esc_html_e( 'Processing:', 'ajc-bridge' ); ?></td>
 								<td><strong id="stat-processing" style="color: #0073aa;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Errors:', 'atomic-jamstack-connector' ); ?></td>
+								<td><?php esc_html_e( 'Errors:', 'ajc-bridge' ); ?></td>
 								<td><strong id="stat-error" style="color: #dc3232;">-</strong></td>
 							</tr>
 							<tr>
-								<td><?php esc_html_e( 'Not Synced:', 'atomic-jamstack-connector' ); ?></td>
+								<td><?php esc_html_e( 'Not Synced:', 'ajc-bridge' ); ?></td>
 								<td><strong id="stat-not-synced">-</strong></td>
 							</tr>
 						</tbody>
 					</table>
 					<button type="button" id="atomic-jamstack-refresh-stats" class="button button-small" style="margin-top: 10px;">
-						<?php esc_html_e( 'Refresh Stats', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Refresh Stats', 'ajc-bridge' ); ?>
 					</button>
 				</div>
 			</div>
 
-			<script>
-			jQuery(document).ready(function($) {
-				// Load initial stats
-				loadStats();
 
-				// Bulk sync button
-				$('#atomic-jamstack-bulk-sync-button').on('click', function() {
-					if (!confirm('<?php echo esc_js( __( 'Are you sure you want to synchronize all published posts? This may take several minutes.', 'atomic-jamstack-connector' ) ); ?>')) {
-						return;
-					}
 
-					var $button = $(this);
-					var $status = $('#atomic-jamstack-bulk-status');
-					var $message = $('#atomic-jamstack-bulk-message');
 
-					$button.prop('disabled', true).html('<span class="dashicons dashicons-update spin"></span> <?php esc_html_e( 'Starting...', 'atomic-jamstack-connector' ); ?>');
-					$status.show();
-
-					$.ajax({
-						url: ajaxurl,
-						type: 'POST',
-						data: {
-							action: 'atomic_jamstack_bulk_sync',
-							nonce: '<?php echo esc_js( wp_create_nonce( 'atomic-jamstack-bulk-sync' ) ); ?>'
-						},
-						success: function(response) {
-							if (response.success) {
-								$message.html('✓ ' + response.data.message);
-								$('#atomic-jamstack-progress-text').text(response.data.enqueued + ' / ' + response.data.total + ' posts enqueued');
-								$('#atomic-jamstack-progress-fill').css('width', '100%');
-								
-								// Start polling
-								startPolling();
-							} else {
-								$message.html('✗ ' + response.data.message);
-							}
-							$button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Synchronize All Posts', 'atomic-jamstack-connector' ); ?>');
-						},
-						error: function() {
-							$message.html('✗ <?php echo esc_js( __( 'Request failed', 'atomic-jamstack-connector' ) ); ?>');
-							$button.prop('disabled', false).html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Synchronize All Posts', 'atomic-jamstack-connector' ); ?>');
-						}
-					});
-				});
-
-				// Refresh stats button
-				$('#atomic-jamstack-refresh-stats').on('click', loadStats);
-
-				// Load stats function
-				function loadStats() {
-					$.ajax({
-						url: ajaxurl,
-						type: 'POST',
-						data: {
-							action: 'atomic_jamstack_get_stats',
-							nonce: '<?php echo esc_js( wp_create_nonce( 'atomic-jamstack-get-stats' ) ); ?>'
-						},
-						success: function(response) {
-							if (response.success) {
-								var stats = response.data;
-								$('#stat-total').text(stats.total);
-								$('#stat-success').text(stats.success);
-								$('#stat-pending').text(stats.pending);
-								$('#stat-processing').text(stats.processing);
-								$('#stat-error').text(stats.error);
-								$('#stat-not-synced').text(stats.not_synced);
-							}
-						}
-					});
-				}
-
-				// Polling function to update progress
-				var pollInterval;
-				function startPolling() {
-					pollInterval = setInterval(function() {
-						loadStats();
-						
-						// Check if done
-						var pending = parseInt($('#stat-pending').text());
-						var processing = parseInt($('#stat-processing').text());
-						
-						if (pending === 0 && processing === 0) {
-							clearInterval(pollInterval);
-							$('#atomic-jamstack-bulk-message').html('✓ <?php echo esc_js( __( 'Bulk sync completed!', 'atomic-jamstack-connector' ) ); ?>');
-						}
-					}, 3000); // Poll every 3 seconds
-				}
-			});
-			</script>
-
-			<style>
-			.dashicons.spin {
-				animation: spin 1s linear infinite;
-			}
-			@keyframes spin {
-				0% { transform: rotate(0deg); }
-				100% { transform: rotate(360deg); }
-			}
-			</style>
 		<?php
 	}
 
@@ -1185,11 +1140,11 @@ class Settings {
 		$current_user_id = get_current_user_id();
 
 		?>
-		<h2><?php esc_html_e( 'Sync History', 'atomic-jamstack-connector' ); ?></h2>
+		<h2><?php esc_html_e( 'Sync History', 'ajc-bridge' ); ?></h2>
 		<?php if ( $is_admin ) : ?>
-			<p><?php esc_html_e( 'View the most recent sync operations and their status.', 'atomic-jamstack-connector' ); ?></p>
+			<p><?php esc_html_e( 'View the most recent sync operations and their status.', 'ajc-bridge' ); ?></p>
 		<?php else : ?>
-			<p><?php esc_html_e( 'View your recent sync operations and their status.', 'atomic-jamstack-connector' ); ?></p>
+			<p><?php esc_html_e( 'View your recent sync operations and their status.', 'ajc-bridge' ); ?></p>
 		<?php endif; ?>
 
 		<?php
@@ -1200,10 +1155,10 @@ class Settings {
 			'posts_per_page' => 20,
 			'orderby'        => 'meta_value',
 			'order'          => 'DESC',
-			'meta_key'       => '_jamstack_sync_last',
+			'meta_key'       => '_ajc_sync_last',
 			'meta_query'     => array(
 				array(
-					'key'     => '_jamstack_sync_status',
+					'key'     => '_ajc_sync_status',
 					'compare' => 'EXISTS',
 				),
 			),
@@ -1220,7 +1175,7 @@ class Settings {
 		if ( ! $query->have_posts() ) {
 			?>
 			<div class="notice notice-info">
-				<p><?php esc_html_e( 'No sync history found. Sync a post to see it appear here.', 'atomic-jamstack-connector' ); ?></p>
+				<p><?php esc_html_e( 'No sync history found. Sync a post to see it appear here.', 'ajc-bridge' ); ?></p>
 			</div>
 			<?php
 			return;
@@ -1231,30 +1186,30 @@ class Settings {
 			<thead>
 				<tr>
 					<th scope="col" class="manage-column column-primary" style="width: 40%;">
-						<?php esc_html_e( 'Post Title', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Post Title', 'ajc-bridge' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 80px;">
-						<?php esc_html_e( 'ID', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'ID', 'ajc-bridge' ); ?>
 					</th>
 					<?php if ( $is_admin ) : ?>
 						<th scope="col" class="manage-column" style="width: 120px;">
-							<?php esc_html_e( 'Author', 'atomic-jamstack-connector' ); ?>
+							<?php esc_html_e( 'Author', 'ajc-bridge' ); ?>
 						</th>
 					<?php endif; ?>
 					<th scope="col" class="manage-column" style="width: 100px;">
-						<?php esc_html_e( 'Type', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Type', 'ajc-bridge' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 120px;">
-						<?php esc_html_e( 'Status', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Status', 'ajc-bridge' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 180px;">
-						<?php esc_html_e( 'Last Sync', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Last Sync', 'ajc-bridge' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 120px;">
-						<?php esc_html_e( 'Commit', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Commit', 'ajc-bridge' ); ?>
 					</th>
 					<th scope="col" class="manage-column" style="width: 120px;">
-						<?php esc_html_e( 'Actions', 'atomic-jamstack-connector' ); ?>
+						<?php esc_html_e( 'Actions', 'ajc-bridge' ); ?>
 					</th>
 				</tr>
 			</thead>
@@ -1263,9 +1218,9 @@ class Settings {
 				while ( $query->have_posts() ) :
 					$query->the_post();
 					$post_id = get_the_ID();
-					$status = get_post_meta( $post_id, '_jamstack_sync_status', true );
-					$last_sync = get_post_meta( $post_id, '_jamstack_sync_last', true );
-					$commit_url = get_post_meta( $post_id, '_jamstack_last_commit_url', true );
+					$status = get_post_meta( $post_id, '_ajc_sync_status', true );
+					$last_sync = get_post_meta( $post_id, '_ajc_sync_last', true );
+					$commit_url = get_post_meta( $post_id, '_ajc_last_commit_url', true );
 					$post_type = get_post_type( $post_id );
 
 					// Status icon and color
@@ -1277,22 +1232,22 @@ class Settings {
 						case 'success':
 							$status_icon = '●';
 							$status_color = '#46b450';
-							$status_label = __( 'Success', 'atomic-jamstack-connector' );
+							$status_label = __( 'Success', 'ajc-bridge' );
 							break;
 						case 'error':
 							$status_icon = '●';
 							$status_color = '#dc3232';
-							$status_label = __( 'Error', 'atomic-jamstack-connector' );
+							$status_label = __( 'Error', 'ajc-bridge' );
 							break;
 						case 'processing':
 							$status_icon = '◐';
 							$status_color = '#0073aa';
-							$status_label = __( 'Processing', 'atomic-jamstack-connector' );
+							$status_label = __( 'Processing', 'ajc-bridge' );
 							break;
 						case 'pending':
 							$status_icon = '○';
 							$status_color = '#f0ad4e';
-							$status_label = __( 'Pending', 'atomic-jamstack-connector' );
+							$status_label = __( 'Pending', 'ajc-bridge' );
 							break;
 						default:
 							$status_icon = '○';
@@ -1302,7 +1257,7 @@ class Settings {
 					}
 
 					// Format last sync time
-					$time_ago = $last_sync ? human_time_diff( strtotime( $last_sync ), current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'atomic-jamstack-connector' ) : __( 'Never', 'atomic-jamstack-connector' );
+					$time_ago = $last_sync ? human_time_diff( strtotime( $last_sync ), current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'ajc-bridge' ) : __( 'Never', 'ajc-bridge' );
 					?>
 					<tr>
 						<td class="column-primary">
@@ -1318,7 +1273,7 @@ class Settings {
 								<?php
 								$author_id = get_post_field( 'post_author', $post_id );
 								$author = get_user_by( 'id', $author_id );
-								echo $author ? esc_html( $author->display_name ) : esc_html__( 'Unknown', 'atomic-jamstack-connector' );
+								echo $author ? esc_html( $author->display_name ) : esc_html__( 'Unknown', 'ajc-bridge' );
 								?>
 							</td>
 						<?php endif; ?>
@@ -1334,7 +1289,7 @@ class Settings {
 							<?php if ( $commit_url ) : ?>
 								<a href="<?php echo esc_url( $commit_url ); ?>" target="_blank" class="button button-small">
 									<span class="dashicons dashicons-external" style="font-size: 13px; width: 13px; height: 13px;"></span>
-									<?php esc_html_e( 'View Commit', 'atomic-jamstack-connector' ); ?>
+									<?php esc_html_e( 'View Commit', 'ajc-bridge' ); ?>
 								</a>
 							<?php else : ?>
 								<span style="color: #999;">—</span>
@@ -1346,7 +1301,7 @@ class Settings {
 									data-post-id="<?php echo esc_attr( $post_id ); ?>"
 									<?php echo $status === 'processing' ? 'disabled' : ''; ?>>
 								<span class="dashicons dashicons-update" style="font-size: 13px; width: 13px; height: 13px;"></span>
-								<?php esc_html_e( 'Sync Now', 'atomic-jamstack-connector' ); ?>
+								<?php esc_html_e( 'Sync Now', 'ajc-bridge' ); ?>
 							</button>
 						</td>
 					</tr>
@@ -1356,58 +1311,9 @@ class Settings {
 
 		<?php wp_reset_postdata(); ?>
 
-		<script>
-		jQuery(document).ready(function($) {
-			$('.atomic-jamstack-sync-now').on('click', function() {
-				var $button = $(this);
-				var postId = $button.data('post-id');
-				
-				$button.prop('disabled', true).html('<span class="dashicons dashicons-update dashicons-spin"></span> <?php esc_html_e( 'Syncing...', 'atomic-jamstack-connector' ); ?>');
-				
-				$.ajax({
-					url: ajaxurl,
-					type: 'POST',
-					data: {
-						action: 'atomic_jamstack_sync_single',
-						nonce: '<?php echo esc_js( wp_create_nonce( 'atomic-jamstack-sync-single' ) ); ?>',
-						post_id: postId
-					},
-					success: function(response) {
-						if (response.success) {
-							$button.html('<span class="dashicons dashicons-yes" style="color: #46b450;"></span> <?php esc_html_e( 'Synced!', 'atomic-jamstack-connector' ); ?>');
-							// Reload page after 2 seconds
-							setTimeout(function() {
-								location.reload();
-							}, 2000);
-						} else {
-							$button.html('<span class="dashicons dashicons-no" style="color: #dc3232;"></span> ' + response.data.message);
-							$button.prop('disabled', false);
-							setTimeout(function() {
-								$button.html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Sync Now', 'atomic-jamstack-connector' ); ?>');
-							}, 3000);
-						}
-					},
-					error: function() {
-						$button.html('<span class="dashicons dashicons-no"></span> <?php esc_html_e( 'Error', 'atomic-jamstack-connector' ); ?>');
-						$button.prop('disabled', false);
-						setTimeout(function() {
-							$button.html('<span class="dashicons dashicons-update"></span> <?php esc_html_e( 'Sync Now', 'atomic-jamstack-connector' ); ?>');
-						}, 3000);
-					}
-				});
-			});
-		});
-		</script>
 
-		<style>
-		.dashicons-spin {
-			animation: atomic-jamstack-spin 1s linear infinite;
-		}
-		@keyframes atomic-jamstack-spin {
-			0% { transform: rotate(0deg); }
-			100% { transform: rotate(360deg); }
-		}
-		</style>
+
+
 		<?php
 	}
 
@@ -1420,16 +1326,16 @@ class Settings {
 		check_ajax_referer( 'atomic-jamstack-bulk-sync', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'ajc-bridge' ) ) );
 		}
 
-		$result = \AtomicJamstack\Core\Queue_Manager::bulk_enqueue();
+		$result = \AjcBridge\Core\Queue_Manager::bulk_enqueue();
 
 		wp_send_json_success(
 			array(
 				'message'  => sprintf(
 					/* translators: 1: Number of posts enqueued, 2: Total posts, 3: Number skipped */
-					__( '%1$d of %2$d posts enqueued for sync (%3$d already in queue).', 'atomic-jamstack-connector' ),
+					__( '%1$d of %2$d posts enqueued for sync (%3$d already in queue).', 'ajc-bridge' ),
 					$result['enqueued'],
 					$result['total'],
 					$result['skipped']
@@ -1450,10 +1356,10 @@ class Settings {
 		check_ajax_referer( 'atomic-jamstack-get-stats', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'ajc-bridge' ) ) );
 		}
 
-		$stats = \AtomicJamstack\Core\Queue_Manager::get_queue_stats();
+		$stats = \AjcBridge\Core\Queue_Manager::get_queue_stats();
 
 		wp_send_json_success( $stats );
 	}
@@ -1467,7 +1373,7 @@ class Settings {
 		check_ajax_referer( 'atomic-jamstack-test-connection', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'ajc-bridge' ) ) );
 		}
 
 		$git_api = new Git_API();
@@ -1479,7 +1385,7 @@ class Settings {
 		}
 
 		Logger::success( 'Connection test successful' );
-		wp_send_json_success( array( 'message' => __( 'Connection successful!', 'atomic-jamstack-connector' ) ) );
+		wp_send_json_success( array( 'message' => __( 'Connection successful!', 'ajc-bridge' ) ) );
 	}
 
 	/**
@@ -1491,21 +1397,21 @@ class Settings {
 		check_ajax_referer( 'atomic-jamstack-sync-single', 'nonce' );
 
 		if ( ! current_user_can( 'publish_posts' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'ajc-bridge' ) ) );
 		}
 
 		$post_id = isset( $_POST['post_id'] ) ? absint( $_POST['post_id'] ) : 0;
 
 		if ( ! $post_id ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid post ID', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid post ID', 'ajc-bridge' ) ) );
 		}
 
 		// Enqueue the post for sync
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-queue-manager.php';
-		\AtomicJamstack\Core\Queue_Manager::enqueue( $post_id, 5 ); // High priority
+		require_once AJC_BRIDGE_PATH . 'core/class-queue-manager.php';
+		\AjcBridge\Core\Queue_Manager::enqueue( $post_id, 5 ); // High priority
 
 		wp_send_json_success( array(
-			'message' => __( 'Post enqueued for synchronization', 'atomic-jamstack-connector' ),
+			'message' => __( 'Post enqueued for synchronization', 'ajc-bridge' ),
 			'post_id' => $post_id,
 		) );
 	}
@@ -1522,18 +1428,18 @@ class Settings {
 		check_ajax_referer( 'atomic-jamstack-test-connection', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Insufficient permissions', 'ajc-bridge' ) ) );
 		}
 
 		$api_key = isset( $_POST['api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['api_key'] ) ) : '';
 
 		if ( empty( $api_key ) ) {
-			wp_send_json_error( array( 'message' => __( 'API key required', 'atomic-jamstack-connector' ) ) );
+			wp_send_json_error( array( 'message' => __( 'API key required', 'ajc-bridge' ) ) );
 		}
 
 		// Test connection WITHOUT saving to database
 		// This avoids triggering sanitize_settings() which would double-encrypt GitHub token
-		require_once ATOMIC_JAMSTACK_PATH . 'core/class-devto-api.php';
+		require_once AJC_BRIDGE_PATH . 'core/class-devto-api.php';
 		
 		// Temporarily override settings for this request only using a filter
 		add_filter(
@@ -1547,7 +1453,7 @@ class Settings {
 			999
 		);
 
-		$devto_api = new \AtomicJamstack\Core\DevTo_API();
+		$devto_api = new \AjcBridge\Core\DevTo_API();
 		$result    = $devto_api->test_connection();
 
 		if ( is_wp_error( $result ) ) {
@@ -1556,6 +1462,6 @@ class Settings {
 		}
 
 		Logger::success( 'Dev.to connection test successful' );
-		wp_send_json_success( array( 'message' => __( 'Connection successful!', 'atomic-jamstack-connector' ) ) );
+		wp_send_json_success( array( 'message' => __( 'Connection successful!', 'ajc-bridge' ) ) );
 	}
 }

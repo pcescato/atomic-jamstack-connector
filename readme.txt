@@ -1,4 +1,4 @@
-=== Atomic Jamstack Connector ===
+=== AJC Bridge ===
 Contributors: pcescato
 Tags: jamstack, hugo, github, devto, static-site, publishing, headless
 Requires at least: 6.9
@@ -12,7 +12,7 @@ Flexible WordPress publishing with 5 strategies: WordPress-only, WordPress+dev.t
 
 == Description ==
 
-Atomic Jamstack Connector is a production-grade WordPress plugin that gives you complete control over where your content is published. Choose from 5 distinct publishing strategies to match your workflow, from traditional WordPress to fully headless JAMstack.
+AJC Bridge is a production-grade WordPress plugin that gives you complete control over where your content is published. Choose from 5 distinct publishing strategies to match your workflow, from traditional WordPress to fully headless JAMstack.
 
 **Publishing Strategies:**
 
@@ -55,7 +55,7 @@ Atomic Jamstack Connector is a production-grade WordPress plugin that gives you 
 * Customizable Front Matter templates with 7+ placeholders (title, date, author, slug, id, images)
 * Compatible with any Hugo theme (PaperMod, Minimal, etc.)
 * Supports both YAML (`---`) and TOML (`+++`) Front Matter formats
-* Single source of truth: `_jamstack_sync_status` post meta
+* Single source of truth: `_ajc_sync_status` post meta
 * WordPress native APIs only (no shell commands)
 * GitHub Trees API for atomic commits (~70% fewer API calls)
 * Smart duplicate prevention
@@ -74,9 +74,60 @@ Atomic Jamstack Connector is a production-grade WordPress plugin that gives you 
 * Dev.to API Key (for dev.to strategies)
 * Hugo static site repository on GitHub (for GitHub strategies)
 
+
+== External Services ==
+
+This plugin connects to external APIs to publish your WordPress content to Jamstack platforms.
+
+**GitHub API**
+
+When using GitHub-based publishing strategies (GitHub Only, Dual GitHub+dev.to), this plugin connects to GitHub's REST API to publish content to your Hugo/Jekyll repository.
+
+* **Service**: GitHub (https://github.com)
+* **API Documentation**: https://docs.github.com/en/rest
+* **Terms of Service**: https://docs.github.com/en/site-policy/github-terms/github-terms-of-service
+* **Privacy Policy**: https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement
+
+**What is sent to GitHub:**
+- Repository name and branch (configured in plugin settings)
+- Markdown content files (converted from your WordPress posts/pages)
+- Media files (images, attachments)
+- Commit messages (auto-generated or custom)
+- Your GitHub Personal Access Token (for authentication)
+
+**When data is sent:**
+- When you publish, update, or delete WordPress content (if auto-sync enabled)
+- When you manually click "Sync Now" on posts
+- When you trigger bulk sync from plugin settings
+
+**Dev.to (Forem) API**
+
+When using dev.to publishing strategies (WordPress+dev.to, dev.to Only, Dual GitHub+dev.to), this plugin connects to the dev.to REST API to publish or update articles.
+
+* **Service**: dev.to (https://dev.to)
+* **API Documentation**: https://developers.forem.com/api/v1
+* **Terms of Service**: https://dev.to/terms
+* **Privacy Policy**: https://dev.to/privacy
+
+**What is sent to dev.to:**
+- Article title, content (Markdown), tags, cover image
+- Canonical URL (for syndication strategies)
+- Published status (articles are created as drafts by default)
+- Your dev.to API key (for authentication)
+
+**When data is sent:**
+- When you publish/update posts with "Publish to dev.to" checkbox enabled
+- When you manually trigger sync for posts
+
+**User Control:**
+- You control which publishing strategy to use in plugin settings
+- Per-post control: Dev.to sync checkbox (visible only in relevant strategies)
+- All API credentials are stored encrypted in your WordPress database
+- No tracking or analytics data is collected by this plugin
+
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/atomic-jamstack-connector/`
+1. Upload the plugin files to `/wp-content/plugins/ajc-bridge/`
 2. Activate the plugin through the 'Plugins' menu in WordPress
 3. Go to Jamstack Sync > Settings
 4. **Choose Your Publishing Strategy** (General tab):
@@ -268,7 +319,7 @@ Major architectural update introducing 5 publishing strategies, dev.to integrati
 Major update with customizable Front Matter templates, enhanced security, improved UI, author access, and robust error handling. Includes PHP 8 fixes and optional clean uninstall. Recommended for all users.
 
 = 1.0.0 =
-Initial release of Atomic Jamstack Connector.
+Initial release of AJC Bridge.
 
 == Development ==
 
@@ -284,7 +335,7 @@ This plugin follows WordPress coding standards and uses:
 * Intervention Image for media processing
 * League CommonMark and HTML-to-Markdown for content conversion
 
-GitHub repository: https://github.com/pcescato/atomic-jamstack-connector
+GitHub repository: https://github.com/pcescato/ajc-bridge
 
 == Privacy ==
 

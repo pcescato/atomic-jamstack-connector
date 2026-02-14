@@ -6,9 +6,10 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'WPJamstack\\' => array($baseDir . '/'),
-    'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-message/src', $vendorDir . '/psr/http-factory/src'),
     'League\\HTMLToMarkdown\\' => array($vendorDir . '/league/html-to-markdown/src'),
-    'Intervention\\Image\\' => array($vendorDir . '/intervention/image/src/Intervention/Image'),
-    'GuzzleHttp\\Psr7\\' => array($vendorDir . '/guzzlehttp/psr7/src'),
+    'Intervention\\Image\\' => array($vendorDir . '/intervention/image/src'),
+    'Intervention\\Gif\\' => array($vendorDir . '/intervention/gif/src'),
+    'AjcBridge\\Admin\\' => array($baseDir . '/admin'),
+    'AjcBridge\\Adapters\\' => array($baseDir . '/adapters'),
+    'AjcBridge\\' => array($baseDir . '/core'),
 );

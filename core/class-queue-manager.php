@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace AtomicJamstack\Core;
+namespace AjcBridge\Core;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Direct access not permitted.' );
@@ -30,27 +30,27 @@ class Queue_Manager {
 	/**
 	 * Action hook for processing sync tasks
 	 */
-	public const SYNC_HOOK = 'atomic_jamstack_sync_post';
+	public const SYNC_HOOK = 'ajc_bridge_sync_post';
 
 	/**
 	 * Action hook for processing deletion tasks
 	 */
-	public const DELETE_HOOK = 'atomic_jamstack_delete_post';
+	public const DELETE_HOOK = 'ajc_bridge_delete_post';
 
 	/**
 	 * Post meta key for sync status
 	 */
-	public const META_STATUS = '_jamstack_sync_status';
+	public const META_STATUS = '_ajc_sync_status';
 
 	/**
 	 * Post meta key for sync timestamp
 	 */
-	public const META_TIMESTAMP = '_jamstack_sync_timestamp';
+	public const META_TIMESTAMP = '_ajc_sync_timestamp';
 
 	/**
 	 * Post meta key for retry counter
 	 */
-	public const META_RETRY_COUNT = '_jamstack_retry_count';
+	public const META_RETRY_COUNT = '_ajc_retry_count';
 
 	/**
 	 * Transient prefix for processing locks
@@ -112,7 +112,7 @@ class Queue_Manager {
 					'post_id'           => $post_id,
 					'function_exists'   => function_exists( 'as_enqueue_async_action' ),
 					'class_exists'      => class_exists( 'ActionScheduler' ),
-					'vendor_path_check' => file_exists( ATOMIC_JAMSTACK_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ),
+					'vendor_path_check' => file_exists( AJC_BRIDGE_PATH . 'vendor/woocommerce/action-scheduler/action-scheduler.php' ),
 				)
 			);
 		}
@@ -310,7 +310,7 @@ class Queue_Manager {
 		Logger::info( 'Bulk sync initiated' );
 
 		// Get enabled post types from settings
-		$settings = get_option( 'atomic_jamstack_settings', array() );
+		$settings = get_option( 'ajc_bridge_settings', array() );
 		$post_types = $settings['enabled_post_types'] ?? array( 'post' );
 
 		// Ensure it's an array
