@@ -464,6 +464,16 @@ class Media_Processor {
 						'size'    => strlen( $avif_content ),
 					)
 				);
+			} else {
+				Logger::error(
+					'Failed to read featured AVIF file contents',
+					array(
+						'post_id'    => $post_id,
+						'avif_path'  => $avif_path,
+						'file_exists' => file_exists( $avif_path ),
+						'filesize'   => file_exists( $avif_path ) ? filesize( $avif_path ) : 0,
+					)
+				);
 			}
 		}
 
@@ -611,6 +621,17 @@ class Media_Processor {
 						'post_id' => $post_id,
 						'file'    => basename( $github_path ),
 						'size'    => strlen( $avif_content ),
+					)
+				);
+			} else {
+				Logger::error(
+					'Failed to read AVIF file contents',
+					array(
+						'post_id'    => $post_id,
+						'basename'   => $basename,
+						'avif_path'  => $avif_path,
+						'file_exists' => file_exists( $avif_path ),
+						'filesize'   => file_exists( $avif_path ) ? filesize( $avif_path ) : 0,
 					)
 				);
 			}
@@ -901,27 +922,26 @@ class Media_Processor {
 		try {
 			$output_path = $this->temp_dir . '/' . $post_id . '/featured.avif';
 
-			$image   = $this->image_manager->read( $source_path );
-			$imagick = $image->core();
+			$image = $this->image_manager->read( $source_path );
+			
+			// Explicitly encode using AvifEncoder for v3 compatibility
+			$image->encode( new \Intervention\Image\Encoders\AvifEncoder( 85 ) );
+			$image->save( $output_path );
 
-			if ( $imagick instanceof \Imagick ) {
-				$imagick->setImageFormat( 'avif' );
-				$imagick->setImageCompressionQuality( 85 );
-				$imagick->writeImage( $output_path );
-
-				Logger::info(
-					'Generated featured AVIF image',
-					array(
-						'post_id' => $post_id,
-						'file'    => 'featured.avif',
-						'size'    => filesize( $output_path ),
-					)
-				);
-
-				return $output_path;
-			} else {
-				return new \WP_Error( 'not_imagick_driver', 'AVIF generation requires Imagick driver' );
+			if ( ! file_exists( $output_path ) || filesize( $output_path ) === 0 ) {
+				throw new \Exception( 'AVIF file was not created or is empty.' );
 			}
+
+			Logger::info(
+				'Generated featured AVIF image',
+				array(
+					'post_id' => $post_id,
+					'file'    => 'featured.avif',
+					'size'    => filesize( $output_path ),
+				)
+			);
+
+			return $output_path;
 
 		} catch ( \Exception $e ) {
 			Logger::warning(
@@ -972,28 +992,24 @@ class Media_Processor {
 
 			$image = $this->image_manager->read( $source_path );
 			
-			// AVIF encoding with quality 85
-			// Note: Intervention/Image may not support AVIF directly, so we use Imagick directly
-			$imagick = $image->core();
-			
-			if ( $imagick instanceof \Imagick ) {
-				$imagick->setImageFormat( 'avif' );
-				$imagick->setImageCompressionQuality( 85 );
-				$imagick->writeImage( $output_path );
-				
-				Logger::info(
-					'Generated AVIF image',
-					array(
-						'post_id' => $post_id,
-						'file'    => basename( $output_path ),
-						'size'    => filesize( $output_path ),
-					)
-				);
-				
-				return $output_path;
-			} else {
-				return new \WP_Error( 'not_imagick_driver', 'AVIF generation requires Imagick driver' );
+			// Explicitly encode using AvifEncoder for v3 compatibility
+			$image->encode( new \Intervention\Image\Encoders\AvifEncoder( 85 ) );
+			$image->save( $output_path );
+
+			if ( ! file_exists( $output_path ) || filesize( $output_path ) === 0 ) {
+				throw new \Exception( 'AVIF file was not created or is empty.' );
 			}
+
+			Logger::info(
+				'Generated AVIF image',
+				array(
+					'post_id' => $post_id,
+					'file'    => basename( $output_path ),
+					'size'    => filesize( $output_path ),
+				)
+			);
+			
+			return $output_path;
 
 		} catch ( \Exception $e ) {
 			Logger::warning(
