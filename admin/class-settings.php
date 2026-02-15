@@ -44,6 +44,7 @@ class Settings {
 	 * @return void
 	 */
 	public static function init(): void {
+		add_action( 'admin_init', array( __CLASS__, 'redirect_non_admin_users' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register_settings' ) );
 		add_action( 'admin_init', array( __CLASS__, 'handle_settings_redirect' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
@@ -52,6 +53,28 @@ class Settings {
 		add_action( 'wp_ajax_ajc_bridge_bulk_sync', array( __CLASS__, 'ajax_bulk_sync' ) );
 		add_action( 'wp_ajax_ajc_bridge_get_stats', array( __CLASS__, 'ajax_get_stats' ) );
 		add_action( 'wp_ajax_ajc_bridge_sync_single', array( __CLASS__, 'ajax_sync_single' ) );
+	}
+
+	/**
+	 * Redirect non-admin users from settings/bulk pages
+	 *
+	 * @return void
+	 */
+	public static function redirect_non_admin_users(): void {
+		// Check if we're on one of our admin pages
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+
+		// Only redirect on main settings page (not bulk or history)
+		if ( 'ajc-bridge' !== $page ) {
+			return;
+		}
+
+		// If user is not admin but has publish_posts, redirect to history
+		if ( ! current_user_can( 'manage_options' ) && current_user_can( 'publish_posts' ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=ajc-bridge-history' ) );
+			exit;
+		}
 	}
 
 	/**
@@ -989,12 +1012,9 @@ class Settings {
 	 * @return void
 	 */
 	public static function render_settings_page(): void {
-		// Redirect non-admin users to history page instead of showing error
+		// Non-admin users are redirected earlier in admin_init
+		// This check is a safety fallback (shouldn't be reached for Authors)
 		if ( ! current_user_can( 'manage_options' ) ) {
-			if ( current_user_can( 'publish_posts' ) ) {
-				wp_safe_redirect( admin_url( 'admin.php?page=ajc-bridge-history' ) );
-				exit;
-			}
 			wp_die(
 				esc_html__( 'You do not have sufficient permissions to access this page.', 'ajc-bridge' )
 			);
