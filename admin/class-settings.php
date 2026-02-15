@@ -989,7 +989,12 @@ class Settings {
 	 * @return void
 	 */
 	public static function render_settings_page(): void {
+		// Redirect non-admin users to history page instead of showing error
 		if ( ! current_user_can( 'manage_options' ) ) {
+			if ( current_user_can( 'publish_posts' ) ) {
+				wp_safe_redirect( admin_url( 'admin.php?page=ajc-bridge-history' ) );
+				exit;
+			}
 			wp_die(
 				esc_html__( 'You do not have sufficient permissions to access this page.', 'ajc-bridge' )
 			);
